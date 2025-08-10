@@ -1,157 +1,122 @@
 
+// app.js
 import { auth, db } from "./main.js";
-import { 
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signOut,
-    onAuthStateChanged
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { 
-    collection, addDoc, query, where, orderBy, getDocs, deleteDoc, doc 
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// UI elements
-const authSection = document.getElementById("auth-section");
-const appSection = document.getElementById("app-section");
-
-const signupBtn = document.getElementById("signup-btn");
-const loginBtn = document.getElementById("login-btn");
-const googleBtn = document.getElementById("google-btn");
-const logoutBtn = document.getElementById("logout-btn");
-
-const amountInput = document.getElementById("amount");
-const categorySelect = document.getElementById("category");
-const noteInput = document.getElementById("note");
-const addExpenseBtn = document.getElementById("add-expense-btn");
-const expensesList = document.getElementById("expenses-list");
-
-// Sign Up
-signupBtn.addEventListener("click", async () => {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-
-    if (!email || !password) {
-        alert("Please fill in all fields");
-        return;
-    }
-
-    try {
-        await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-        alert(err.message);
-    }
+// --- Auth Functions ---
+document.getElementById("signup-btn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    alert("Sign up successful!");
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
-// Login
-loginBtn.addEventListener("click", async () => {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-
-    if (!email || !password) {
-        alert("Please fill in all fields");
-        return;
-    }
-
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-        alert(err.message);
-    }
+document.getElementById("login-btn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Login successful!");
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
-// Google Login
-googleBtn.addEventListener("click", async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-        await signInWithPopup(auth, provider);
-    } catch (err) {
-        alert(err.message);
-    }
+document.getElementById("google-btn").addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth, provider);
+    alert("Google login successful!");
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
-// Logout
-logoutBtn.addEventListener("click", async () => {
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  try {
     await signOut(auth);
+    alert("Logged out successfully!");
+  } catch (error) {
+    alert(error.message);
+  }
 });
 
-// Auth State Change
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        authSection.classList.add("hidden");
-        appSection.classList.remove("hidden");
-        loadExpenses();
-    } else {
-        authSection.classList.remove("hidden");
-        appSection.classList.add("hidden");
-    }
+// --- Add Expense ---
+document.getElementById("add-expense-btn").addEventListener("click", async () => {
+  const amount = parseFloat(document.getElementById("amount").value);
+  const category = document.getElementById("category").value;
+  const note = document.getElementById("note").value || "";
+  const user = auth.currentUser;
+
+  if (!user) {
+    alert("Please sign in first.");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "expenses"), {
+      amount: amount,
+      category: category,
+      note: note,
+      uid: user.uid,
+      date: new Date().toISOString()
+    });
+    alert("Expense added!");
+    loadExpenses(user.uid); // Refresh after adding
+  } catch (error) {
+    console.error("Error adding expense:", error);
+    alert(error.message);
+  }
 });
 
-// Add Expense
-addExpenseBtn.addEventListener("click", async () => {
-    const amount = amountInput.value.trim();
-    const category = categorySelect.value;
-    const note = noteInput.value.trim();
-    const user = auth.currentUser;
+// --- Load Expenses ---
+async function loadExpenses(uid) {
+  try {
+    const expenseRef = collection(db, "expenses");
+    const q = query(expenseRef, where("uid", "==", uid));
+    const querySnapshot = await getDocs(q);
 
-    if (!amount || !category) {
-        alert("Please enter amount and category");
-        return;
-    }
+    const tableBody = document.getElementById("expense-table-body");
+    tableBody.innerHTML = ""; // Clear table
 
-    try {
-        await addDoc(collection(db, "expenses"), {
-            uid: user.uid,
-            amount: parseFloat(amount),
-            category,
-            note,
-            date: new Date().toISOString()
-        });
-        amountInput.value = "";
-        noteInput.value = "";
-        loadExpenses();
-    } catch (err) {
-        alert("Error adding expense: " + err.message);
-    }
-});
-
-// Load Expenses
-async function loadExpenses() {
-    const user = auth.currentUser;
-    expensesList.innerHTML = "";
-
-    try {
-        const q = query(
-            collection(db, "expenses"),
-            where("uid", "==", user.uid),
-            orderBy("date", "desc")
-        );
-        const snapshot = await getDocs(q);
-
-        snapshot.forEach((docSnap) => {
-            const exp = docSnap.data();
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${exp.amount}</td>
-                <td>${exp.category}</td>
-                <td>${exp.note || ""}</td>
-                <td>${new Date(exp.date).toLocaleString()}</td>
-                <td><button onclick="deleteExpense('${docSnap.id}')">Delete</button></td>
-            `;
-            expensesList.appendChild(row);
-        });
-    } catch (err) {
-        alert("Error loading expenses: " + err.message);
-    }
+    querySnapshot.forEach((doc) => {
+      const exp = doc.data();
+      const row = `<tr>
+        <td>${exp.amount}</td>
+        <td>${exp.category}</td>
+        <td>${exp.note}</td>
+        <td>${new Date(exp.date).toLocaleDateString()}</td>
+      </tr>`;
+      tableBody.innerHTML += row;
+    });
+  } catch (error) {
+    console.error("Error loading expenses:", error);
+  }
 }
 
-// Delete Expense
-window.deleteExpense = async function (id) {
-    try {
-        await deleteDoc(doc(db, "expenses", id));
-        loadExpenses();
-    } catch (err) {
-        alert("Error deleting expense: " + err.message);
-    }
-};
+// --- Auto-load when logged in ---
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadExpenses(user.uid);
+  } else {
+    document.getElementById("expense-table-body").innerHTML = "";
+  }
+});
