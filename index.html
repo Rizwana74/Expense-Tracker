@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+
+        <!-- Authentication Section -->
+        <section id="auth-section">
+            <h2>Expense Tracker</h2>
+            <input type="email" id="email" placeholder="Email" />
+            <input type="password" id="password" placeholder="Password" />
+            <button id="signup-btn">Sign Up</button>
+            <button id="login-btn">Login</button>
+            <button id="google-btn">Sign In with Google</button>
+        </section>
+
+        <!-- App Section -->
+        <section id="app-section" class="hidden">
+            <button id="logout-btn">Logout</button>
+            <h3>Add Expense</h3>
+            <input type="number" id="amount" placeholder="Amount" />
+            <select id="category">
+                <option value="Food">Food</option>
+                <option value="Transport">Transport</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+            </select>
+            <input type="text" id="note" placeholder="Note (optional)" />
+            <button id="add-expense-btn">Add Expense</button>
+
+            <h3>Your Expenses</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Category</th>
+                        <th>Note</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="expenses-list"></tbody>
+            </table>
+        </section>
+    </div>
+
+    <!-- Load Firebase & App Scripts -->
+    <script type="module" src="main.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
