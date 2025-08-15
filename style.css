@@ -1,114 +1,56 @@
-* {
+body {
   margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: white;
+  text-align: center;
 }
 
 .page {
-  height: 100vh;
-  width: 100%;
-  background-size: cover;
-  background-position: center;
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100vh;
 }
 
 .hidden {
   display: none;
 }
 
-/* LOGIN PAGE */
-#login-page {
-  background-image: url('Xpen.jpg');
-}
-#login-page .overlay {
-  background: rgba(0,0,0,0.4);
-  padding: 40px;
-  border-radius: 15px;
-  text-align: center;
-  color: white;
-}
-#login-page h1 {
-  font-size: 2.5rem;
-  margin-bottom: 20px;
-  text-shadow: 2px 2px 8px black;
-}
-#login-page input, #login-page button {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 8px;
-  border: none;
-  font-size: 1rem;
-}
-#login-page button {
-  background: #ff8fab;
-  color: white;
-  cursor: pointer;
-  transition: 0.3s;
-}
-#login-page button:hover {
-  background: #ff6b8b;
+.overlay {
+  background: rgba(0,0,0,0.7);
+  padding: 30px;
+  border-radius: 10px;
 }
 
-/* MAIN PAGE */
-#main-page {
-  background-image: url('11.jpg');
-  overflow-y: auto;
-}
-.main-overlay {
-  background: rgba(255,255,255,0.75);
-  padding: 20px;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 900px;
-}
-#welcome-message {
-  font-size: 2rem;
-  color: black;
-  margin-bottom: 15px;
-}
-.expense-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.expense-form input, .expense-form select, .expense-form button {
+input, select, button {
+  margin: 10px;
   padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-.expense-form button {
-  background: #ff8fab;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-.expense-form button:hover {
-  background: #ff6b8b;
-}
-table {
-  width: 100%;
-  background: white;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-th, td {
-  padding: 10px;
-  border: 1px solid #ddd;
-  text-align: center;
-}
-button.delete-btn {
-  background: crimson;
-  color: white;
-  border: none;
-  padding: 5px 10px;
   border-radius: 5px;
+  border: none;
+}
+
+button {
+  background: #ff8fab;
+  color: black;
   cursor: pointer;
 }
-button.delete-btn:hover {
-  background: darkred;
+
+button:hover {
+  background: #ff4f7b;
+}
+
+table {
+  margin: 20px auto;
+  border-collapse: collapse;
+  width: 90%;
+}
+
+th, td {
+  border: 1px solid white;
+  padding: 8px;
+}
+
+canvas {
+  margin-top: 20px;
 }
