@@ -1,11 +1,9 @@
 import { app } from "./main.js";
-
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, GoogleAuthProvider,
   signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
 import {
   getFirestore, collection, addDoc, query, where,
   orderBy, onSnapshot, deleteDoc, doc
@@ -36,42 +34,62 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-// Buttons
+// LOGIN BUTTON
 document.getElementById('login-btn').onclick = async () => {
   authError.textContent = "";
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   if (!email || !password) return authError.textContent = "Enter email and password.";
-  try { await signInWithEmailAndPassword(auth, email, password); }
-  catch (e) { authError.textContent = e.message; }
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    if (e.code === "auth/user-not-found") authError.textContent = "❌ User not found.";
+    else if (e.code === "auth/wrong-password") authError.textContent = "❌ Wrong password.";
+    else if (e.code === "auth/invalid-email") authError.textContent = "❌ Invalid email format.";
+    else authError.textContent = "❌ " + e.message;
+  }
 };
 
+// SIGNUP BUTTON
 document.getElementById('signup-btn').onclick = async () => {
   authError.textContent = "";
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   if (!email || !password) return authError.textContent = "Enter email and password.";
-  try { await createUserWithEmailAndPassword(auth, email, password); }
-  catch (e) { authError.textContent = e.message; }
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    if (e.code === "auth/email-already-in-use") authError.textContent = "❌ Email already in use.";
+    else if (e.code === "auth/invalid-email") authError.textContent = "❌ Invalid email format.";
+    else if (e.code === "auth/weak-password") authError.textContent = "❌ Weak password. Use at least 6 chars.";
+    else authError.textContent = "❌ " + e.message;
+  }
 };
 
+// GOOGLE SIGN-IN
 document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-  } catch (e) { authError.textContent = e.message; }
+  } catch (e) {
+    if (e.code === "auth/popup-closed-by-user") authError.textContent = "❌ Popup closed before completing sign-in.";
+    else if (e.code === "auth/cancelled-popup-request") authError.textContent = "❌ Another popup is already open.";
+    else authError.textContent = "❌ " + e.message;
+  }
 };
 
+// LOGOUT BUTTON
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
+// ADD EXPENSE
 document.getElementById('add-expense-btn').onclick = async () => {
   dataError.textContent = "";
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
   const note = document.getElementById('note').value.trim();
-  if (!auth.currentUser) return (dataError.textContent = "Please log in.");
-  if (!amount)       return (dataError.textContent = "Enter a valid amount.");
+  if (!auth.currentUser) return dataError.textContent = "Please log in.";
+  if (!amount) return dataError.textContent = "Enter a valid amount.";
 
   try {
     await addDoc(collection(db, 'expenses'), {
@@ -81,10 +99,12 @@ document.getElementById('add-expense-btn').onclick = async () => {
     });
     document.getElementById('amount').value = "";
     document.getElementById('note').value = "";
-  } catch (e) { dataError.textContent = e.message; }
+  } catch (e) {
+    dataError.textContent = e.message;
+  }
 };
 
-// Live query + render
+// LIVE QUERY + RENDER
 let unsubscribe = null;
 function startLiveQuery() {
   if (!auth.currentUser) return;
@@ -96,22 +116,21 @@ function startLiveQuery() {
   unsubscribe && unsubscribe();
   unsubscribe = onSnapshot(q, renderSnapshot, (e)=> dataError.textContent = e.message);
 }
-function stopLiveQuery(){ if (unsubscribe){ unsubscribe(); unsubscribe = null; } }
+function stopLiveQuery() { if (unsubscribe){ unsubscribe(); unsubscribe = null; } }
 
-// Render table + chart
+// RENDER TABLE + CHART
 let chart;
-function renderSnapshot(snapshot){
+function renderSnapshot(snapshot) {
   const tbody = document.getElementById('expense-table');
   tbody.innerHTML = "";
 
   const categoryTotals = {};
-  const timeSeries = []; // {x: Date, y: amount}
+  const timeSeries = [];
 
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
     const when = data.date?.toDate ? data.date.toDate() : new Date(data.date);
 
-    // table row
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>₹ ${Number(data.amount).toFixed(2)}</td>
@@ -122,27 +141,23 @@ function renderSnapshot(snapshot){
     `;
     tbody.appendChild(tr);
 
-    // totals
     categoryTotals[data.category] = (categoryTotals[data.category] || 0) + Number(data.amount || 0);
     timeSeries.push({ x: when, y: Number(data.amount || 0) });
   });
 
-  // hook up delete
-  document.querySelectorAll(".delete-btn").forEach(btn=>{
+  document.querySelectorAll(".delete-btn").forEach(btn => {
     btn.onclick = async () => {
       try { await deleteDoc(doc(db, 'expenses', btn.dataset.id)); }
       catch(e){ dataError.textContent = e.message; }
     };
   });
 
-  // chart
   drawChart(categoryTotals, timeSeries);
 }
 
-// draw chart based on selector
-chartTypeSelect.onchange = () => { // re-render current data quickly
-  // trigger a fake refresh by restarting query render
-  if (unsubscribe) unsubscribe(); 
+// CHART RENDER
+chartTypeSelect.onchange = () => {
+  if (unsubscribe) unsubscribe();
   startLiveQuery();
 };
 
@@ -153,41 +168,24 @@ function drawChart(categoryTotals, timeSeries){
   const type = chartTypeSelect.value;
 
   if (type === 'line') {
-    // aggregate by date (ascending)
     const byDate = {};
-    timeSeries.forEach(pt=>{
+    timeSeries.forEach(pt => {
       const key = pt.x.toISOString().slice(0,10);
       byDate[key] = (byDate[key] || 0) + pt.y;
     });
     const labels = Object.keys(byDate).sort();
-    const values = labels.map(k=>byDate[k]);
+    const values = labels.map(k => byDate[k]);
 
     chart = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Daily spend',
-          data: values,
-          fill: false
-        }]
-      }
+      data: { labels, datasets: [{ label: 'Daily spend', data: values, fill: false }] }
     });
 
   } else {
-    // bar by category
     chart = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: Object.keys(categoryTotals),
-        datasets: [{
-          label: 'Total by category',
-          data: Object.values(categoryTotals)
-        }]
-      },
-      options: {
-        plugins:{ legend:{ display:false } }
-      }
+      data: { labels: Object.keys(categoryTotals), datasets: [{ label: 'Total by category', data: Object.values(categoryTotals) }] },
+      options: { plugins:{ legend:{ display:false } } }
     });
   }
 }
