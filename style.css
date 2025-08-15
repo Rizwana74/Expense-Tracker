@@ -1,199 +1,114 @@
-:root{
-  --ink-white: #ffffff;
-  --ink-black: #141414;
-  --ink-dim: #5b5b5b;
-  --purple-1: #8a2be2;
-  --purple-2: #a259ff;
-  --danger-1: #ff4d6d;
-  --danger-2: #c9184a;
-
-  --glass: rgba(255,255,255,0.12);
-  --shadow: 0 20px 40px rgba(0,0,0,0.30);
-  --radius: 18px;
-}
-
-*{ box-sizing: border-box; }
-html, body { height: 100%; }
-body{
+* {
   margin: 0;
-  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
 }
 
-/* ===== Backgrounds ===== */
-body.login-page{
-  color: var(--ink-white);
-  text-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  background: url('Xpen.jpg') center/cover no-repeat fixed;
-}
-
-body.dashboard-page{
-  color: var(--ink-black);                 /* <- BLACK TEXT */
-  text-shadow: none;
-  background: url('1.jpg') center/cover no-repeat fixed;
-  position: relative;
-}
-
-/* subtle white overlay for readability if bg has noise */
-.bg-overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(255,255,255,0.35);
-  backdrop-filter: saturate(120%) blur(1px);
-  pointer-events: none;
-}
-
-/* ===== Sections & layout ===== */
-.page{
+.page {
+  height: 100vh;
   width: 100%;
-  min-height: 100vh;
-  padding: 24px;
-}
-.centered{ display: grid; place-items: center; }
-.hidden{ display: none !important; }
-
-/* ===== Card ===== */
-.card{
-  width: min(92vw, 460px);
-  background: var(--glass);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
-}
-.card.white{
-  width: 100%;
-  background: #ffffffcc;
-  border: 1px solid #eee;
-  color: var(--ink-black);
-  text-shadow: none;
-}
-
-/* ===== Brand ===== */
-.brand{
-  margin: 0 0 6px;
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: .4px;
-}
-.subtitle{
-  margin: 0 0 18px;
-  opacity: .9;
-}
-
-/* ===== Form ===== */
-.form input, .form select{
-  width: 100%;
-  padding: 12px 14px;
-  margin: 8px 0;
-  border: 1px solid #d7d7d7;
-  border-radius: 12px;
-  background: #fff;
-  color: var(--ink-black);
-  outline: none;
-  transition: border .15s ease;
-}
-.form input:focus, .form select:focus{
-  border-color: var(--purple-2);
-}
-
-.grid-4{
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.grid-4 input, .grid-4 select{ margin: 0; }
-.grid-4 .w-full{ grid-column: 1 / -1; }
-
-/* ===== Buttons ===== */
-.btn{
-  display: inline-flex;
+  background-size: cover;
+  background-position: center;
+  display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+}
+
+.hidden {
+  display: none;
+}
+
+/* LOGIN PAGE */
+#login-page {
+  background-image: url('Xpen.jpg');
+}
+#login-page .overlay {
+  background: rgba(0,0,0,0.4);
+  padding: 40px;
+  border-radius: 15px;
+  text-align: center;
+  color: white;
+}
+#login-page h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 8px black;
+}
+#login-page input, #login-page button {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 8px;
   border: none;
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-weight: 600;
+  font-size: 1rem;
+}
+#login-page button {
+  background: #ff8fab;
+  color: white;
   cursor: pointer;
-  transition: transform .06s ease, filter .18s ease, box-shadow .2s ease;
-  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+  transition: 0.3s;
 }
-.btn:active{ transform: translateY(1px); }
-.btn.primary{
-  background: linear-gradient(135deg, var(--purple-1), var(--purple-2));
-  color: #fff;
-}
-.btn.ghost{
-  background: rgba(255,255,255,0.08);
-  color: var(--ink-white);
-  border: 1px solid rgba(255,255,255,0.25);
-}
-.btn.google{
-  background: #fff;
-  color: #111;
-}
-.btn.danger{
-  background: linear-gradient(135deg, var(--danger-1), var(--danger-2));
-  color: #fff;
-}
-.w-full{ width: 100%; }
-
-.divider{
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  place-items: center;
-  color: rgba(255,255,255,0.9);
-  margin: 12px 0;
-}
-.divider::before, .divider::after{
-  content: "";
-  height: 1px;
-  width: 100%;
-  background: rgba(255,255,255,0.35);
+#login-page button:hover {
+  background: #ff6b8b;
 }
 
-/* ===== Topbar & grid ===== */
-.topbar{
+/* MAIN PAGE */
+#main-page {
+  background-image: url('11.jpg');
+  overflow-y: auto;
+}
+.main-overlay {
+  background: rgba(255,255,255,0.75);
+  padding: 20px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 900px;
+}
+#welcome-message {
+  font-size: 2rem;
+  color: black;
+  margin-bottom: 15px;
+}
+.expense-form {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  margin: 12px 16px 20px;
-  border-radius: var(--radius);
-  background: #ffffffcf;
-  border: 1px solid #eee;
-  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-.welcome{ margin: 0; font-weight: 700; }
-
-.grid{
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 1fr 1fr;
-  padding: 0 16px 24px;
+.expense-form input, .expense-form select, .expense-form button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
-.table-card{ grid-column: 1 / -1; }
-@media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
-
-/* ===== Table ===== */
-.table-wrap{
-  max-height: 440px;
-  overflow: auto;
-  border-radius: 12px;
-  background: #fff;
+.expense-form button {
+  background: #ff8fab;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
-.table{
+.expense-form button:hover {
+  background: #ff6b8b;
+}
+table {
   width: 100%;
+  background: white;
   border-collapse: collapse;
-  color: var(--ink-black);
+  margin-bottom: 20px;
 }
-.table th, .table td{
-  text-align: left;
-  padding: 12px 10px;
-  border-bottom: 1px solid #eee;
+th, td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: center;
 }
-.table th{ position: sticky; top: 0; background: #fafafa; }
-
-/* Login card width */
-.login-card{ width: min(92vw, 420px); }
+button.delete-btn {
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+button.delete-btn:hover {
+  background: darkred;
+}
