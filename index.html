@@ -1,52 +1,91 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Xpen Tracker</title>
-  <link rel="stylesheet" href="style.css">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="login-page">
+  <!-- ===== LOGIN SECTION ===== -->
+  <section id="loginSection" class="page centered">
+    <div class="card login-card">
+      <h1 class="brand">Xpen Tracker</h1>
+      <p class="subtitle">Track smarter. Spend wiser.</p>
 
-  <header>
-    <h1>Xpen Tracker </h1>
-    <button id="logoutBtn" class="hidden">Logout</button>
-  </header>
+      <div class="form">
+        <input id="email" type="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Password" />
 
-  <main>
-    <section id="authSection">
-      <h2>Login / Sign Up</h2>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <button id="signupBtn">Sign Up</button>
-      <button id="loginBtn">Login</button>
-      <button id="googleLoginBtn">Login with Google</button>
-    </section>
+        <button id="loginBtn" class="btn primary w-full">Login</button>
+        <button id="signupBtn" class="btn ghost w-full">Sign Up</button>
 
-    <section id="expenseSection" class="hidden">
-      <h2>Add Expense</h2>
-      <input type="number" id="amount" placeholder="Amount">
-      <input type="text" id="category" placeholder="Category">
-      <input type="text" id="note" placeholder="Note (optional)">
-      <button id="addExpenseBtn">Add Expense</button>
+        <div class="divider"><span>or</span></div>
+        <button id="googleBtn" class="btn google w-full">Sign in with Google</button>
+      </div>
+    </div>
+  </section>
 
-      <h3>Your Expenses</h3>
-      <table id="expenseTable">
-        <thead>
-          <tr>
-            <th>Amount</th>
-            <th>Category</th>
-            <th>Note</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="expenseList"></tbody>
-      </table>
-    </section>
-  </main>
+  <!-- ===== DASHBOARD SECTION ===== -->
+  <section id="dashboardSection" class="page hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h2 class="welcome" id="welcomeText">Welcome!</h2>
+      </div>
+      <div class="topbar-right">
+        <button id="logoutBtn" class="btn danger">Logout</button>
+      </div>
+    </header>
 
-  <!-- Load Firebase & App JS at the very end -->
+    <main class="grid">
+      <!-- Add Expense -->
+      <div class="card glass">
+        <h3>Add Expense</h3>
+        <div class="form grid-3">
+          <input id="amount" type="number" placeholder="Amount" />
+          <input id="category" type="text" placeholder="Category (e.g., Food)" />
+          <input id="note" type="text" placeholder="Note (optional)" />
+          <button id="addExpenseBtn" class="btn primary w-full">Add Expense</button>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card glass">
+        <h3>Spending by Category</h3>
+        <canvas id="expenseChart" height="160"></canvas>
+      </div>
+
+      <!-- Table -->
+      <div class="card glass table-card">
+        <h3>Your Expenses</h3>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="expenseTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- Firebase init + exports -->
+  <script type="module" src="main.js"></script>
+  <!-- App logic -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
+
