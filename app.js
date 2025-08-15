@@ -4,7 +4,6 @@ import {
   createUserWithEmailAndPassword, GoogleAuthProvider,
   signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
 import {
   getFirestore, collection, addDoc, query, where,
   orderBy, onSnapshot, deleteDoc, doc
@@ -35,34 +34,43 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-// Email/Password Login
+// LOGIN BUTTON
 document.getElementById('login-btn').onclick = async () => {
   authError.textContent = "";
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   if (!email || !password) return authError.textContent = "Enter email and password.";
-  try { await signInWithEmailAndPassword(auth, email, password); }
-  catch (e) { authError.textContent = e.message; }
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    if (e.code === "auth/user-not-found") authError.textContent = "❌ User not found.";
+    else if (e.code === "auth/wrong-password") authError.textContent = "❌ Wrong password.";
+    else if (e.code === "auth/invalid-email") authError.textContent = "❌ Invalid email format.";
+    else authError.textContent = "❌ " + e.message;
+  }
 };
 
-// Sign Up
+// SIGNUP BUTTON
 document.getElementById('signup-btn').onclick = async () => {
   authError.textContent = "";
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   if (!email || !password) return authError.textContent = "Enter email and password.";
-  try { await createUserWithEmailAndPassword(auth, email, password); }
-  catch (e) { authError.textContent = e.message; }
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    if (e.code === "auth/email-already-in-use") authError.textContent = "❌ Email already in use.";
+    else if (e.code === "auth/invalid-email") authError.textContent = "❌ Invalid email format.";
+    else if (e.code === "auth/weak-password") authError.textContent = "❌ Weak password. Use at least 6 chars.";
+    else authError.textContent = "❌ " + e.message;
+  }
 };
 
-// ✅ Fixed Google Login
+// GOOGLE SIGN-IN
 document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
-
-    // Always show the account chooser (local accounts available on device/browser)
-    provider.setCustomParameters({ prompt: 'select_account' });
     provider.addScope('profile');
     provider.addScope('email');
 
@@ -80,17 +88,17 @@ document.getElementById('google-login-btn').onclick = async () => {
   }
 };
 
-// Logout
+// LOGOUT BUTTON
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-// Add Expense
+// ADD EXPENSE
 document.getElementById('add-expense-btn').onclick = async () => {
   dataError.textContent = "";
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
   const note = document.getElementById('note').value.trim();
-  if (!auth.currentUser) return (dataError.textContent = "Please log in.");
-  if (!amount)       return (dataError.textContent = "Enter a valid amount.");
+  if (!auth.currentUser) return dataError.textContent = "Please log in.";
+  if (!amount) return dataError.textContent = "Enter a valid amount.";
 
   try {
     await addDoc(collection(db, 'expenses'), {
@@ -100,10 +108,12 @@ document.getElementById('add-expense-btn').onclick = async () => {
     });
     document.getElementById('amount').value = "";
     document.getElementById('note').value = "";
-  } catch (e) { dataError.textContent = e.message; }
+  } catch (e) {
+    dataError.textContent = e.message;
+  }
 };
 
-// Live query + render
+// LIVE QUERY + RENDER
 let unsubscribe = null;
 function startLiveQuery() {
   if (!auth.currentUser) return;
@@ -115,11 +125,11 @@ function startLiveQuery() {
   unsubscribe && unsubscribe();
   unsubscribe = onSnapshot(q, renderSnapshot, (e)=> dataError.textContent = e.message);
 }
-function stopLiveQuery(){ if (unsubscribe){ unsubscribe(); unsubscribe = null; } }
+function stopLiveQuery() { if (unsubscribe){ unsubscribe(); unsubscribe = null; } }
 
-// Render table + chart
+// RENDER TABLE + CHART
 let chart;
-function renderSnapshot(snapshot){
+function renderSnapshot(snapshot) {
   const tbody = document.getElementById('expense-table');
   tbody.innerHTML = "";
 
@@ -144,7 +154,7 @@ function renderSnapshot(snapshot){
     timeSeries.push({ x: when, y: Number(data.amount || 0) });
   });
 
-  document.querySelectorAll(".delete-btn").forEach(btn=>{
+  document.querySelectorAll(".delete-btn").forEach(btn => {
     btn.onclick = async () => {
       try { await deleteDoc(doc(db, 'expenses', btn.dataset.id)); }
       catch(e){ dataError.textContent = e.message; }
@@ -154,9 +164,9 @@ function renderSnapshot(snapshot){
   drawChart(categoryTotals, timeSeries);
 }
 
-// Chart
+// CHART RENDER
 chartTypeSelect.onchange = () => {
-  if (unsubscribe) unsubscribe(); 
+  if (unsubscribe) unsubscribe();
   startLiveQuery();
 };
 
@@ -168,28 +178,22 @@ function drawChart(categoryTotals, timeSeries){
 
   if (type === 'line') {
     const byDate = {};
-    timeSeries.forEach(pt=>{
+    timeSeries.forEach(pt => {
       const key = pt.x.toISOString().slice(0,10);
       byDate[key] = (byDate[key] || 0) + pt.y;
     });
     const labels = Object.keys(byDate).sort();
-    const values = labels.map(k=>byDate[k]);
+    const values = labels.map(k => byDate[k]);
 
     chart = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{ label: 'Daily spend', data: values, fill: false }]
-      }
+      data: { labels, datasets: [{ label: 'Daily spend', data: values, fill: false }] }
     });
 
   } else {
     chart = new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels: Object.keys(categoryTotals),
-        datasets: [{ label: 'Total by category', data: Object.values(categoryTotals) }]
-      },
+      data: { labels: Object.keys(categoryTotals), datasets: [{ label: 'Total by category', data: Object.values(categoryTotals) }] },
       options: { plugins:{ legend:{ display:false } } }
     });
   }
