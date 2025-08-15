@@ -2,7 +2,7 @@ import { app } from "./main.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, GoogleAuthProvider,
-  signInWithPopup, signOut
+  signInWithPopup, signInWithRedirect, getRedirectResult, signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, query, where,
@@ -19,6 +19,19 @@ const welcomeMessage = document.getElementById('welcome-message');
 const authError = document.getElementById('auth-error');
 const dataError = document.getElementById('data-error');
 const chartTypeSelect = document.getElementById('chart-type');
+
+// Handle redirect sign-in (for mobile)
+getRedirectResult(auth)
+  .then((result) => {
+    if (result?.user) {
+      // User signed in via redirect
+      loginPage.classList.add('hidden');
+      mainPage.classList.remove('hidden');
+      welcomeMessage.textContent = `Welcome, ${result.user.email.split('@')[0]}!`;
+      startLiveQuery();
+    }
+  })
+  .catch((e) => { authError.textContent = "❌ " + e.message; });
 
 // Auth state
 onAuthStateChanged(auth, user => {
@@ -66,15 +79,24 @@ document.getElementById('signup-btn').onclick = async () => {
   }
 };
 
-// GOOGLE SIGN-IN
+// GOOGLE SIGN-IN (Mobile + Desktop Friendly)
 document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
     provider.addScope('email');
+    provider.setCustomParameters({ prompt: 'select_account' }); // show all accounts
 
-    await signInWithPopup(auth, provider);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // Use redirect for mobile
+      await signInWithRedirect(auth, provider);
+    } else {
+      // Desktop popup
+      await signInWithPopup(auth, provider);
+    }
 
   } catch (e) {
     if (e.code === "auth/popup-closed-by-user")
@@ -198,3 +220,4 @@ function drawChart(categoryTotals, timeSeries){
     });
   }
 }
+
