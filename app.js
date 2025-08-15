@@ -1,118 +1,193 @@
 import { app } from "./main.js";
-import { 
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, GoogleAuthProvider, 
-  signInWithPopup, signOut 
+
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, GoogleAuthProvider,
+  signInWithPopup, signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-import { 
-  getFirestore, collection, addDoc, query, where, 
-  orderBy, onSnapshot, deleteDoc, doc 
+
+import {
+  getFirestore, collection, addDoc, query, where,
+  orderBy, onSnapshot, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Elements
 const loginPage = document.getElementById('login-page');
-const mainPage = document.getElementById('main-page');
+const mainPage  = document.getElementById('main-page');
 const welcomeMessage = document.getElementById('welcome-message');
+const authError = document.getElementById('auth-error');
+const dataError = document.getElementById('data-error');
+const chartTypeSelect = document.getElementById('chart-type');
 
-onAuthStateChanged(auth, (user) => {
+// Auth state
+onAuthStateChanged(auth, user => {
   if (user) {
     loginPage.classList.add('hidden');
     mainPage.classList.remove('hidden');
     welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
-    loadExpenses();
+    startLiveQuery();
   } else {
     loginPage.classList.remove('hidden');
     mainPage.classList.add('hidden');
+    stopLiveQuery();
   }
 });
 
-document.getElementById('login-btn').onclick = () => {
-  const email = document.getElementById('email').value;
+// Buttons
+document.getElementById('login-btn').onclick = async () => {
+  authError.textContent = "";
+  const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  signInWithEmailAndPassword(auth, email, password).catch(err => alert(err.message));
+  if (!email || !password) return authError.textContent = "Enter email and password.";
+  try { await signInWithEmailAndPassword(auth, email, password); }
+  catch (e) { authError.textContent = e.message; }
 };
 
-document.getElementById('signup-btn').onclick = () => {
-  const email = document.getElementById('email').value;
+document.getElementById('signup-btn').onclick = async () => {
+  authError.textContent = "";
+  const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  createUserWithEmailAndPassword(auth, email, password).catch(err => alert(err.message));
+  if (!email || !password) return authError.textContent = "Enter email and password.";
+  try { await createUserWithEmailAndPassword(auth, email, password); }
+  catch (e) { authError.textContent = e.message; }
 };
 
-document.getElementById('google-login-btn').onclick = () => {
-  const provider = new GoogleAuthProvider();
-  signInWithPopup(auth, provider).catch(err => alert(err.message));
+document.getElementById('google-login-btn').onclick = async () => {
+  authError.textContent = "";
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch (e) { authError.textContent = e.message; }
 };
 
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
 document.getElementById('add-expense-btn').onclick = async () => {
+  dataError.textContent = "";
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
-  const note = document.getElementById('note').value;
+  const note = document.getElementById('note').value.trim();
+  if (!auth.currentUser) return (dataError.textContent = "Please log in.");
+  if (!amount)       return (dataError.textContent = "Enter a valid amount.");
 
-  if (!amount) return alert("Enter amount");
-
-  await addDoc(collection(db, 'expenses'), {
-    uid: auth.currentUser.uid,
-    amount,
-    category,
-    note,
-    date: new Date()
-  });
-
-  document.getElementById('amount').value = '';
-  document.getElementById('note').value = '';
+  try {
+    await addDoc(collection(db, 'expenses'), {
+      uid: auth.currentUser.uid,
+      amount, category, note,
+      date: new Date()
+    });
+    document.getElementById('amount').value = "";
+    document.getElementById('note').value = "";
+  } catch (e) { dataError.textContent = e.message; }
 };
 
-function loadExpenses() {
+// Live query + render
+let unsubscribe = null;
+function startLiveQuery() {
+  if (!auth.currentUser) return;
   const q = query(
     collection(db, 'expenses'),
     where('uid', '==', auth.currentUser.uid),
     orderBy('date', 'desc')
   );
+  unsubscribe && unsubscribe();
+  unsubscribe = onSnapshot(q, renderSnapshot, (e)=> dataError.textContent = e.message);
+}
+function stopLiveQuery(){ if (unsubscribe){ unsubscribe(); unsubscribe = null; } }
 
-  onSnapshot(q, (snapshot) => {
-    const table = document.getElementById('expense-table');
-    table.innerHTML = '';
-    let categoryTotals = {};
+// Render table + chart
+let chart;
+function renderSnapshot(snapshot){
+  const tbody = document.getElementById('expense-table');
+  tbody.innerHTML = "";
 
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${data.amount}</td>
-        <td>${data.category}</td>
-        <td>${data.note || ''}</td>
-        <td>${data.date.toDate().toLocaleDateString()}</td>
-        <td><button class="delete-btn" data-id="${docSnap.id}">Delete</button></td>
-      `;
-      table.appendChild(tr);
+  const categoryTotals = {};
+  const timeSeries = []; // {x: Date, y: amount}
 
-      categoryTotals[data.category] = (categoryTotals[data.category] || 0) + data.amount;
-    });
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const when = data.date?.toDate ? data.date.toDate() : new Date(data.date);
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.onclick = () => deleteDoc(doc(db, 'expenses', btn.getAttribute('data-id')));
-    });
+    // table row
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>₹ ${Number(data.amount).toFixed(2)}</td>
+      <td>${data.category}</td>
+      <td>${data.note || ""}</td>
+      <td>${when.toLocaleDateString()}</td>
+      <td><button class="delete delete-btn" data-id="${docSnap.id}">Delete</button></td>
+    `;
+    tbody.appendChild(tr);
 
-    updateChart(categoryTotals);
+    // totals
+    categoryTotals[data.category] = (categoryTotals[data.category] || 0) + Number(data.amount || 0);
+    timeSeries.push({ x: when, y: Number(data.amount || 0) });
   });
+
+  // hook up delete
+  document.querySelectorAll(".delete-btn").forEach(btn=>{
+    btn.onclick = async () => {
+      try { await deleteDoc(doc(db, 'expenses', btn.dataset.id)); }
+      catch(e){ dataError.textContent = e.message; }
+    };
+  });
+
+  // chart
+  drawChart(categoryTotals, timeSeries);
 }
 
-let chart;
-function updateChart(categoryTotals) {
+// draw chart based on selector
+chartTypeSelect.onchange = () => { // re-render current data quickly
+  // trigger a fake refresh by restarting query render
+  if (unsubscribe) unsubscribe(); 
+  startLiveQuery();
+};
+
+function drawChart(categoryTotals, timeSeries){
   const ctx = document.getElementById('expense-chart').getContext('2d');
   if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: Object.keys(categoryTotals),
-      datasets: [{
-        data: Object.values(categoryTotals),
-        backgroundColor: ['#ff8fab','#a29bfe','#ffeaa7','#fab1a0','#55efc4']
-      }]
-    }
-  });
+
+  const type = chartTypeSelect.value;
+
+  if (type === 'line') {
+    // aggregate by date (ascending)
+    const byDate = {};
+    timeSeries.forEach(pt=>{
+      const key = pt.x.toISOString().slice(0,10);
+      byDate[key] = (byDate[key] || 0) + pt.y;
+    });
+    const labels = Object.keys(byDate).sort();
+    const values = labels.map(k=>byDate[k]);
+
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Daily spend',
+          data: values,
+          fill: false
+        }]
+      }
+    });
+
+  } else {
+    // bar by category
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(categoryTotals),
+        datasets: [{
+          label: 'Total by category',
+          data: Object.values(categoryTotals)
+        }]
+      },
+      options: {
+        plugins:{ legend:{ display:false } }
+      }
+    });
+  }
 }
