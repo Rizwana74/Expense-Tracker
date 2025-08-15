@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Xpen Tracker</title>
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body class="login-page">
-  <!-- ===== LOGIN SECTION ===== -->
+  <!-- ===== LOGIN ===== -->
   <section id="loginSection" class="page centered">
     <div class="card login-card">
       <h1 class="brand">Xpen Tracker</h1>
@@ -32,37 +30,43 @@
     </div>
   </section>
 
-  <!-- ===== DASHBOARD SECTION ===== -->
+  <!-- ===== DASHBOARD ===== -->
   <section id="dashboardSection" class="page hidden">
+    <!-- bg overlay to boost readability on light images -->
+    <div class="bg-overlay"></div>
+
     <header class="topbar">
-      <div class="topbar-left">
-        <h2 class="welcome" id="welcomeText">Welcome!</h2>
-      </div>
-      <div class="topbar-right">
-        <button id="logoutBtn" class="btn danger">Logout</button>
-      </div>
+      <h2 class="welcome" id="welcomeText">Welcome!</h2>
+      <button id="logoutBtn" class="btn danger">Logout</button>
     </header>
 
     <main class="grid">
       <!-- Add Expense -->
-      <div class="card glass">
+      <div class="card white">
         <h3>Add Expense</h3>
-        <div class="form grid-3">
+        <div class="form grid-4">
           <input id="amount" type="number" placeholder="Amount" />
-          <input id="category" type="text" placeholder="Category (e.g., Food)" />
+          <select id="category">
+            <option value="" selected disabled>Choose category</option>
+            <option>Food</option>
+            <option>Travel</option>
+            <option>Shopping</option>
+            <option>Entertainment</option>
+            <option>Others</option>
+          </select>
           <input id="note" type="text" placeholder="Note (optional)" />
           <button id="addExpenseBtn" class="btn primary w-full">Add Expense</button>
         </div>
       </div>
 
       <!-- Chart -->
-      <div class="card glass">
+      <div class="card white">
         <h3>Spending by Category</h3>
         <canvas id="expenseChart" height="160"></canvas>
       </div>
 
       <!-- Table -->
-      <div class="card glass table-card">
+      <div class="card white table-card">
         <h3>Your Expenses</h3>
         <div class="table-wrap">
           <table class="table">
@@ -82,10 +86,7 @@
     </main>
   </section>
 
-  <!-- Firebase init + exports -->
   <script type="module" src="main.js"></script>
-  <!-- App logic -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
