@@ -71,11 +71,20 @@ document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+
     await signInWithPopup(auth, provider);
+
   } catch (e) {
-    if (e.code === "auth/popup-closed-by-user") authError.textContent = "❌ Popup closed before completing sign-in.";
-    else if (e.code === "auth/cancelled-popup-request") authError.textContent = "❌ Another popup is already open.";
-    else authError.textContent = "❌ " + e.message;
+    if (e.code === "auth/popup-closed-by-user")
+      authError.textContent = "❌ Popup closed before completing sign-in.";
+    else if (e.code === "auth/cancelled-popup-request")
+      authError.textContent = "❌ Another popup is already open.";
+    else if (e.code === "auth/account-exists-with-different-credential")
+      authError.textContent = "❌ Account exists with different credentials.";
+    else
+      authError.textContent = "❌ " + e.message;
   }
 };
 
