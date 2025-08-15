@@ -1,9 +1,9 @@
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background: #121212;
+  background-color: #1a1a2e;
   color: white;
-  text-align: center;
+  margin: 0;
+  padding: 0;
 }
 
 .page {
@@ -17,40 +17,40 @@ body {
   display: none;
 }
 
-.overlay {
-  background: rgba(0,0,0,0.7);
+.overlay, .main-overlay {
+  background: rgba(0, 0, 0, 0.8);
   padding: 30px;
-  border-radius: 10px;
+  border-radius: 12px;
+  text-align: center;
 }
 
 input, select, button {
-  margin: 10px;
+  display: block;
+  margin: 10px auto;
   padding: 10px;
+  width: 80%;
   border-radius: 5px;
   border: none;
 }
 
 button {
-  background: #ff8fab;
-  color: black;
   cursor: pointer;
+  background-color: #00adb5;
+  color: white;
 }
 
 button:hover {
-  background: #ff4f7b;
+  background-color: #008c92;
 }
 
 table {
-  margin: 20px auto;
-  border-collapse: collapse;
-  width: 90%;
+  margin-top: 20px;
+  width: 100%;
+  background: white;
+  color: black;
 }
 
 th, td {
-  border: 1px solid white;
-  padding: 8px;
-}
-
-canvas {
-  margin-top: 20px;
+  padding: 10px;
+  text-align: center;
 }
