@@ -1,3 +1,8 @@
+// Import Firebase SDK modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
 // ✅ Replace with your Firebase config
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
@@ -8,15 +13,18 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Initialize Firebase services
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
+// DOM Elements
 const loginPage = document.getElementById('login-page');
 const mainPage = document.getElementById('main-page');
 const welcomeMessage = document.getElementById('welcome-message');
 
-auth.onAuthStateChanged(user => {
+// Auth State Listener
+onAuthStateChanged(auth, user => {
   if (user) {
     loginPage.classList.add('hidden');
     mainPage.classList.remove('hidden');
@@ -28,30 +36,38 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// Login
 document.getElementById('login-btn').onclick = () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  auth.signInWithEmailAndPassword(email, password).catch(alert);
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  signInWithEmailAndPassword(auth, email, password).catch(err => alert(err.message));
 };
-document.getElementById('signup-btn').onclick = () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  auth.createUserWithEmailAndPassword(email, password).catch(alert);
-};
-document.getElementById('google-login-btn').onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(alert);
-};
-document.getElementById('logout-btn').onclick = () => auth.signOut();
 
-document.getElementById('add-expense-btn').onclick = () => {
+// Signup
+document.getElementById('signup-btn').onclick = () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  createUserWithEmailAndPassword(auth, email, password).catch(err => alert(err.message));
+};
+
+// Google Sign-in
+document.getElementById('google-login-btn').onclick = () => {
+  const provider = new GoogleAuthProvider();
+  signInWithPopup(auth, provider).catch(err => alert(err.message));
+};
+
+// Logout
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+// Add Expense
+document.getElementById('add-expense-btn').onclick = async () => {
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
   const note = document.getElementById('note').value;
 
   if (!amount) return alert("Enter amount");
 
-  db.collection('expenses').add({
+  await addDoc(collection(db, 'expenses'), {
     uid: auth.currentUser.uid,
     amount,
     category,
@@ -60,43 +76,45 @@ document.getElementById('add-expense-btn').onclick = () => {
   });
 };
 
+// Load Expenses
 function loadExpenses() {
-  db.collection('expenses').where('uid', '==', auth.currentUser.uid)
-    .orderBy('date', 'desc')
-    .onSnapshot(snapshot => {
-      const table = document.getElementById('expense-table');
-      table.innerHTML = '';
-      let categoryTotals = {};
+  const q = query(
+    collection(db, 'expenses'),
+    where('uid', '==', auth.currentUser.uid),
+    orderBy('date', 'desc')
+  );
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const tr = document.createElement('tr');
+  onSnapshot(q, snapshot => {
+    const table = document.getElementById('expense-table');
+    table.innerHTML = '';
+    let categoryTotals = {};
 
-        tr.innerHTML = `
-          <td>${data.amount}</td>
-          <td>${data.category}</td>
-          <td>${data.note || ''}</td>
-          <td>${data.date.toDate().toLocaleDateString()}</td>
-          <td><button class="delete-btn" data-id="${doc.id}">Delete</button></td>
-        `;
-
-        table.appendChild(tr);
-
-        categoryTotals[data.category] = (categoryTotals[data.category] || 0) + data.amount;
-      });
-
-      // Delete button
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.onclick = () => {
-          db.collection('expenses').doc(btn.getAttribute('data-id')).delete();
-        };
-      });
-
-      // Chart update
-      updateChart(categoryTotals);
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${data.amount}</td>
+        <td>${data.category}</td>
+        <td>${data.note || ''}</td>
+        <td>${data.date.toDate().toLocaleDateString()}</td>
+        <td><button class="delete-btn" data-id="${docSnap.id}">Delete</button></td>
+      `;
+      table.appendChild(tr);
+      categoryTotals[data.category] = (categoryTotals[data.category] || 0) + data.amount;
     });
+
+    // Delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.onclick = async () => {
+        await deleteDoc(doc(db, 'expenses', btn.getAttribute('data-id')));
+      };
+    });
+
+    updateChart(categoryTotals);
+  });
 }
 
+// Chart.js Pie Chart
 let chart;
 function updateChart(categoryTotals) {
   const ctx = document.getElementById('expense-chart').getContext('2d');
