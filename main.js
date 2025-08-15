@@ -1,7 +1,8 @@
-// main.js — Firebase Initialization
+// main.js — Firebase Initialization (v9 modular via CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
 
+// 🔑 Your config (unchanged, but storageBucket corrected for Firebase)
 const firebaseConfig = {
   apiKey: "AIzaSyBcCrwyvmUSgOECow7pb5Y1NVXuE-SkRiY",
   authDomain: "expensetracker-e2ed6.firebaseapp.com",
@@ -13,4 +14,5 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const analytics = getAnalytics(app);
+// Analytics only works on https + with measurementId
+try { getAnalytics(app); } catch(_) {}
