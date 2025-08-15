@@ -1,56 +1,136 @@
-body {
-  font-family: Arial, sans-serif;
-  background-color: #1a1a2e;
-  color: white;
-  margin: 0;
-  padding: 0;
+:root{
+  --bg-dark:#0f1020;
+  --card:#12142cdd;
+  --text:#ffffff;
+  --muted:#c9c7d8;
+  --accent:#8b5cf6;      /* purple */
+  --accent2:#ff78b3;     /* pink */
+  --outline:#ffffff33;
+  --danger:#ff4d6d;
 }
 
-.page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
+  color:var(--text);
+  background:var(--bg-dark);
 }
 
-.hidden {
-  display: none;
+/* PAGES */
+.page{
+  min-height:100vh;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+  padding:24px;
+}
+.bg-login{ background-image:url("Xpen.jpg"); }
+.bg-main { background-image:url("11.jpg"); }
+.hidden{ display:none !important; }
+
+/* CARDS / LAYOUT */
+.card{
+  width:100%;
+  max-width:420px;
+  padding:28px 24px;
+  border-radius:16px;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, #0f0f22bb, #0f0f22dd);
+  border:1px solid var(--outline);
+  box-shadow: 0 10px 40px #00000080;
+  text-align:center;
+}
+.card h1{ margin:0 0 6px; font-size:28px; letter-spacing:0.5px }
+.subtitle{ margin:0 0 18px; color:var(--muted) }
+
+.main-wrap{
+  width:min(1100px, 100%);
+  padding:16px;
+  border-radius:20px;
+  background:linear-gradient(180deg, #0e0f22cc, #0e0f22ee);
+  border:1px solid var(--outline);
+  backdrop-filter: blur(6px);
+  box-shadow:0 10px 40px #00000080;
 }
 
-.overlay, .main-overlay {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
+/* TOPBAR */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; padding:8px 4px 12px 4px; border-bottom:1px dashed var(--outline);
+}
+.topbar h2{ margin:0; font-size:22px }
+.muted{ color:var(--muted); margin:2px 0 0 }
+
+/* FORMS */
+input, select{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #ffffff22;
+  background:#0d0e20;
+  color:var(--text);
+  outline:none;
+}
+input::placeholder{ color:#bdbad6 }
+.form-row{
+  display:grid;
+  grid-template-columns: 140px 160px 1fr 120px;
+  gap:12px; align-items:center;
+}
+.panel{
+  margin-top:18px;
+  padding:14px;
+  border:1px solid var(--outline);
+  border-radius:16px;
+  background:#0d0f24bb;
+}
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:8px;
+}
+.chart-controls{
+  display:flex; gap:8px; align-items:center; color:var(--muted);
 }
 
-input, select, button {
-  display: block;
-  margin: 10px auto;
-  padding: 10px;
-  width: 80%;
-  border-radius: 5px;
-  border: none;
+/* BUTTONS */
+.btn{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #ffffff22;
+  background:#1a1b33;
+  color:var(--text);
+  cursor:pointer; transition:.2s;
 }
+.btn:hover{ transform:translateY(-1px); box-shadow:0 6px 22px #00000066; }
+.btn.primary{
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border:none; color:white; font-weight:600;
+}
+.btn.google{ background:#ffffff; color:#222; }
+.btn.outline{
+  background:transparent; border:1px solid #ffffff55;
+}
+.actions{ display:flex; gap:12px; }
+.divider{ margin:10px 0; color:var(--muted); font-size:14px }
 
-button {
-  cursor: pointer;
-  background-color: #00adb5;
-  color: white;
+/* TABLE */
+.table-wrap{ width:100%; overflow:auto; border-radius:12px; border:1px solid var(--outline); }
+table{ width:100%; border-collapse:collapse; background:#0b0d1b; }
+th, td{ padding:12px; border-bottom:1px solid #ffffff14; }
+th{ text-align:left; color:#bfbbe0; font-weight:600; font-size:14px }
+td button.delete{
+  background:transparent; border:1px solid #ff5b7f66; color:#ff93ad;
+  padding:6px 10px; border-radius:10px; cursor:pointer;
 }
+td button.delete:hover{ background:#ff5b7f22; }
+.error{ color:var(--danger); margin-top:8px; min-height:18px }
 
-button:hover {
-  background-color: #008c92;
-}
-
-table {
-  margin-top: 20px;
-  width: 100%;
-  background: white;
-  color: black;
-}
-
-th, td {
-  padding: 10px;
-  text-align: center;
-}
+/* CANVAS */
+canvas{ margin-top:16px; background:#0b0d1b; border-radius:12px; padding:8px; }
