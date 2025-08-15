@@ -1,218 +1,114 @@
-import { auth, db, googleProvider } from "./main.js";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  query,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+// ✅ Replace with your Firebase config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
 
-/* ===== DOM ===== */
-const body = document.body;
-const loginSection = document.getElementById("loginSection");
-const dashboardSection = document.getElementById("dashboardSection");
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-const emailEl = document.getElementById("email");
-const passwordEl = document.getElementById("password");
-const loginBtn = document.getElementById("loginBtn");
-const signupBtn = document.getElementById("signupBtn");
-const googleBtn = document.getElementById("googleBtn");
-const logoutBtn = document.getElementById("logoutBtn");
+const loginPage = document.getElementById('login-page');
+const mainPage = document.getElementById('main-page');
+const welcomeMessage = document.getElementById('welcome-message');
 
-const welcomeText = document.getElementById("welcomeText");
-const amountEl = document.getElementById("amount");
-const categoryEl = document.getElementById("category");
-const noteEl = document.getElementById("note");
-const addExpenseBtn = document.getElementById("addExpenseBtn");
-const expenseTbody = document.getElementById("expenseTbody");
-
-const chartCanvas = document.getElementById("expenseChart");
-let chartInstance = null;
-
-let currentUID = null;
-
-/* ===== Auth State ===== */
-onAuthStateChanged(auth, (user) => {
+auth.onAuthStateChanged(user => {
   if (user) {
-    currentUID = user.uid;
-    loginSection.classList.add("hidden");
-    dashboardSection.classList.remove("hidden");
-    body.classList.remove("login-page");
-    body.classList.add("dashboard-page");
-
-    const name = user.displayName || user.email || "there";
-    welcomeText.textContent = `Welcome, ${name}!`;
-
-    streamExpenses();
+    loginPage.classList.add('hidden');
+    mainPage.classList.remove('hidden');
+    welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
+    loadExpenses();
   } else {
-    currentUID = null;
-    dashboardSection.classList.add("hidden");
-    loginSection.classList.remove("hidden");
-    body.classList.remove("dashboard-page");
-    body.classList.add("login-page");
+    loginPage.classList.remove('hidden');
+    mainPage.classList.add('hidden');
   }
 });
 
-/* ===== Auth Actions ===== */
-loginBtn.addEventListener("click", async () => {
-  const email = emailEl.value.trim();
-  const pass = passwordEl.value;
-  if (!email || !pass) return alert("Please enter email and password.");
-  try { await signInWithEmailAndPassword(auth, email, pass); }
-  catch (e) { alert(e.message); }
-});
+document.getElementById('login-btn').onclick = () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  auth.signInWithEmailAndPassword(email, password).catch(alert);
+};
+document.getElementById('signup-btn').onclick = () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  auth.createUserWithEmailAndPassword(email, password).catch(alert);
+};
+document.getElementById('google-login-btn').onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(alert);
+};
+document.getElementById('logout-btn').onclick = () => auth.signOut();
 
-signupBtn.addEventListener("click", async () => {
-  const email = emailEl.value.trim();
-  const pass = passwordEl.value;
-  if (!email || !pass) return alert("Please enter email and password.");
-  try { await createUserWithEmailAndPassword(auth, email, pass); }
-  catch (e) { alert(e.message); }
-});
+document.getElementById('add-expense-btn').onclick = () => {
+  const amount = parseFloat(document.getElementById('amount').value);
+  const category = document.getElementById('category').value;
+  const note = document.getElementById('note').value;
 
-googleBtn.addEventListener("click", async () => {
-  try { await signInWithPopup(auth, googleProvider); }
-  catch (e) { alert(e.message); }
-});
+  if (!amount) return alert("Enter amount");
 
-logoutBtn.addEventListener("click", async () => { await signOut(auth); });
-
-/* ===== Add Expense ===== */
-addExpenseBtn.addEventListener("click", async () => {
-  if (!currentUID) return alert("Please sign in first.");
-
-  const amount = parseFloat(amountEl.value);
-  const category = (categoryEl.value || "").trim();
-  const note = (noteEl.value || "").trim();
-
-  if (!amount || !category) return alert("Amount and Category are required.");
-
-  try {
-    await addDoc(collection(db, "users", currentUID, "expenses"), {
-      amount,
-      category,
-      note,
-      createdAt: serverTimestamp()
-    });
-    amountEl.value = "";
-    categoryEl.value = "";
-    noteEl.value = "";
-  } catch (e) {
-    alert("Error adding expense: " + e.message);
-  }
-});
-
-/* ===== Stream & Render ===== */
-function streamExpenses() {
-  const q = query(
-    collection(db, "users", currentUID, "expenses"),
-    orderBy("createdAt", "desc")
-  );
-
-  onSnapshot(q, (snap) => {
-    const totalsByCategory = {};
-    const rows = [];
-
-    snap.forEach((d) => {
-      const data = d.data();
-      const id = d.id;
-
-      const amt = Number(data.amount) || 0;
-      const cat = data.category || "Others";
-      const note = data.note || "";
-      const dateStr = data.createdAt?.toDate
-        ? data.createdAt.toDate().toLocaleString()
-        : "—";
-
-      totalsByCategory[cat] = (totalsByCategory[cat] || 0) + amt;
-
-      rows.push(`
-        <tr>
-          <td>₹ ${amt.toLocaleString()}</td>
-          <td>${escapeHTML(cat)}</td>
-          <td>${escapeHTML(note)}</td>
-          <td>${dateStr}</td>
-          <td>
-            <button class="btn danger" data-id="${id}" data-action="delete">Delete</button>
-          </td>
-        </tr>
-      `);
-    });
-
-    expenseTbody.innerHTML = rows.join("");
-
-    // Attach delete handlers
-    expenseTbody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-id");
-        try {
-          await deleteDoc(doc(db, "users", currentUID, "expenses", id));
-        } catch (e) {
-          alert("Delete failed: " + e.message);
-        }
-      });
-    });
-
-    drawChart(totalsByCategory);
-  }, (err) => {
-    alert("Error loading expenses: " + err.message);
+  db.collection('expenses').add({
+    uid: auth.currentUser.uid,
+    amount,
+    category,
+    note,
+    date: new Date()
   });
+};
+
+function loadExpenses() {
+  db.collection('expenses').where('uid', '==', auth.currentUser.uid)
+    .orderBy('date', 'desc')
+    .onSnapshot(snapshot => {
+      const table = document.getElementById('expense-table');
+      table.innerHTML = '';
+      let categoryTotals = {};
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${data.amount}</td>
+          <td>${data.category}</td>
+          <td>${data.note || ''}</td>
+          <td>${data.date.toDate().toLocaleDateString()}</td>
+          <td><button class="delete-btn" data-id="${doc.id}">Delete</button></td>
+        `;
+
+        table.appendChild(tr);
+
+        categoryTotals[data.category] = (categoryTotals[data.category] || 0) + data.amount;
+      });
+
+      // Delete button
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = () => {
+          db.collection('expenses').doc(btn.getAttribute('data-id')).delete();
+        };
+      });
+
+      // Chart update
+      updateChart(categoryTotals);
+    });
 }
 
-/* ===== Chart ===== */
-function drawChart(byCategory){
-  const labels = Object.keys(byCategory);
-  const data = Object.values(byCategory);
-
-  if (chartInstance) chartInstance.destroy();
-
-  chartInstance = new Chart(chartCanvas.getContext("2d"), {
-    type: "doughnut",
+let chart;
+function updateChart(categoryTotals) {
+  const ctx = document.getElementById('expense-chart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'pie',
     data: {
-      labels,
+      labels: Object.keys(categoryTotals),
       datasets: [{
-        label: "Total Spend",
-        data,
-        borderWidth: 0,
-        hoverOffset: 6,
-        backgroundColor: [
-          "#8a2be2", "#a259ff", "#c8b6ff", "#7b2cbf", "#5a189a",
-          "#efb8ff", "#9a73ff", "#b388ff"
-        ]
+        data: Object.values(categoryTotals),
+        backgroundColor: ['#ff8fab','#a29bfe','#ffeaa7','#fab1a0','#55efc4']
       }]
-    },
-    options: {
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: { color: "#141414", boxWidth: 14, padding: 16 } // black labels on dashboard
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ₹ ${Number(ctx.raw ?? 0).toLocaleString()}`
-          }
-        }
-      }
     }
   });
-}
-
-/* ===== Utils ===== */
-function escapeHTML(str){
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
 }
