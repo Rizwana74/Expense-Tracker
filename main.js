@@ -1,10 +1,9 @@
-// Import Firebase SDK modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+// Firebase (v10.x CDN modules)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-// Your Firebase configuration
+/* KEEP YOUR CONFIG — you already shared these keys */
 const firebaseConfig = {
   apiKey: "AIzaSyBcCrwyvmUSgOECow7pb5Y1NVXuE-SkRiY",
   authDomain: "expensetracker-e2ed6.firebaseapp.com",
@@ -15,9 +14,8 @@ const firebaseConfig = {
   measurementId: "G-2VD1YCZ6WG"
 };
 
-// Initialize Firebase
+// Init
 export const app = initializeApp(firebaseConfig);
-export const analytics = getAnalytics(app);
 export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
