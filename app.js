@@ -39,7 +39,6 @@ const expenseTbody = document.getElementById("expenseTbody");
 const chartCanvas = document.getElementById("expenseChart");
 let chartInstance = null;
 
-/* ===== State ===== */
 let currentUID = null;
 
 /* ===== Auth State ===== */
@@ -54,7 +53,7 @@ onAuthStateChanged(auth, (user) => {
     const name = user.displayName || user.email || "there";
     welcomeText.textContent = `Welcome, ${name}!`;
 
-    startExpenseStream();
+    streamExpenses();
   } else {
     currentUID = null;
     dashboardSection.classList.add("hidden");
@@ -69,36 +68,24 @@ loginBtn.addEventListener("click", async () => {
   const email = emailEl.value.trim();
   const pass = passwordEl.value;
   if (!email || !pass) return alert("Please enter email and password.");
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch (e) {
-    alert(e.message);
-  }
+  try { await signInWithEmailAndPassword(auth, email, pass); }
+  catch (e) { alert(e.message); }
 });
 
 signupBtn.addEventListener("click", async () => {
   const email = emailEl.value.trim();
   const pass = passwordEl.value;
   if (!email || !pass) return alert("Please enter email and password.");
-  try {
-    await createUserWithEmailAndPassword(auth, email, pass);
-    alert("Account created! You are now signed in.");
-  } catch (e) {
-    alert(e.message);
-  }
+  try { await createUserWithEmailAndPassword(auth, email, pass); }
+  catch (e) { alert(e.message); }
 });
 
 googleBtn.addEventListener("click", async () => {
-  try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (e) {
-    alert(e.message);
-  }
+  try { await signInWithPopup(auth, googleProvider); }
+  catch (e) { alert(e.message); }
 });
 
-logoutBtn.addEventListener("click", async () => {
-  await signOut(auth);
-});
+logoutBtn.addEventListener("click", async () => { await signOut(auth); });
 
 /* ===== Add Expense ===== */
 addExpenseBtn.addEventListener("click", async () => {
@@ -108,9 +95,7 @@ addExpenseBtn.addEventListener("click", async () => {
   const category = (categoryEl.value || "").trim();
   const note = (noteEl.value || "").trim();
 
-  if (!amount || !category) {
-    return alert("Amount and Category are required.");
-  }
+  if (!amount || !category) return alert("Amount and Category are required.");
 
   try {
     await addDoc(collection(db, "users", currentUID, "expenses"), {
@@ -128,20 +113,22 @@ addExpenseBtn.addEventListener("click", async () => {
 });
 
 /* ===== Stream & Render ===== */
-function startExpenseStream() {
-  const colRef = collection(db, "users", currentUID, "expenses");
-  const q = query(colRef, orderBy("createdAt", "desc"));
+function streamExpenses() {
+  const q = query(
+    collection(db, "users", currentUID, "expenses"),
+    orderBy("createdAt", "desc")
+  );
 
   onSnapshot(q, (snap) => {
-    const rows = [];
     const totalsByCategory = {};
+    const rows = [];
 
     snap.forEach((d) => {
       const data = d.data();
       const id = d.id;
 
       const amt = Number(data.amount) || 0;
-      const cat = data.category || "Other";
+      const cat = data.category || "Others";
       const note = data.note || "";
       const dateStr = data.createdAt?.toDate
         ? data.createdAt.toDate().toLocaleString()
@@ -163,6 +150,8 @@ function startExpenseStream() {
     });
 
     expenseTbody.innerHTML = rows.join("");
+
+    // Attach delete handlers
     expenseTbody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-id");
@@ -175,6 +164,8 @@ function startExpenseStream() {
     });
 
     drawChart(totalsByCategory);
+  }, (err) => {
+    alert("Error loading expenses: " + err.message);
   });
 }
 
@@ -183,11 +174,7 @@ function drawChart(byCategory){
   const labels = Object.keys(byCategory);
   const data = Object.values(byCategory);
 
-  if (!chartCanvas) return;
-
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+  if (chartInstance) chartInstance.destroy();
 
   chartInstance = new Chart(chartCanvas.getContext("2d"), {
     type: "doughnut",
@@ -199,8 +186,8 @@ function drawChart(byCategory){
         borderWidth: 0,
         hoverOffset: 6,
         backgroundColor: [
-          "#b388ff","#9a73ff","#8a2be2","#a259ff","#c8b6ff",
-          "#e0aaff","#7b2cbf","#5a189a","#3c096c","#efb8ff"
+          "#8a2be2", "#a259ff", "#c8b6ff", "#7b2cbf", "#5a189a",
+          "#efb8ff", "#9a73ff", "#b388ff"
         ]
       }]
     },
@@ -208,18 +195,11 @@ function drawChart(byCategory){
       plugins: {
         legend: {
           position: "bottom",
-          labels: {
-            color: "#fff",
-            boxWidth: 14,
-            padding: 16
-          }
+          labels: { color: "#141414", boxWidth: 14, padding: 16 } // black labels on dashboard
         },
         tooltip: {
           callbacks: {
-            label: (ctx) => {
-              const v = ctx.raw ?? 0;
-              return ` ₹ ${Number(v).toLocaleString()}`;
-            }
+            label: (ctx) => ` ₹ ${Number(ctx.raw ?? 0).toLocaleString()}`
           }
         }
       }
