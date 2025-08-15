@@ -134,3 +134,68 @@ td button.delete:hover{ background:#ff5b7f22; }
 
 /* CANVAS */
 canvas{ margin-top:16px; background:#0b0d1b; border-radius:12px; padding:8px; }
+
+/* =================== MOBILE VIEW =================== */
+@media (max-width: 768px) {
+  .main-wrap {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr; /* Stack inputs vertically */
+    gap: 10px;
+  }
+
+  .chart-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .table-wrap {
+    overflow-x: auto; /* Horizontal scroll for table */
+  }
+
+  table th, table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  td button.delete {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  input, select, .btn {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .btn.google {
+    font-size: 13px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .card h1 {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .topbar h2 {
+    font-size: 18px;
+  }
+
+  canvas {
+    height: 200px; /* Shrink chart for mobile */
+  }
+}
