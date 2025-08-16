@@ -63,14 +63,12 @@ signupBtn.addEventListener("click", async () => {
   }
 });
 
-// Google login — always ask account chooser
+// Google login (always ask account chooser)
 googleLoginBtn.addEventListener("click", async () => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-
   try {
     await signInWithPopup(auth, provider);
-    // No linking logic here → Firebase handles UID correctly
   } catch (err) {
     document.getElementById("auth-error").innerText = err.message;
     console.error("Google login error:", err);
@@ -94,6 +92,7 @@ onAuthStateChanged(auth, (user) => {
     mainPage.classList.add("hidden");
     welcomeMessage.innerText = "Welcome!";
     if (unsubscribeExpenses) unsubscribeExpenses();
+    if (expensesChart) expensesChart.destroy();
   }
 });
 
@@ -119,7 +118,7 @@ function loadExpenses(uid) {
   });
 }
 
-// Render table row
+// Render expense row
 function renderExpense(id, e) {
   const tr = document.createElement("tr");
   tr.innerHTML = `
@@ -162,12 +161,14 @@ addExpenseBtn.addEventListener("click", async () => {
   document.getElementById("note").value = "";
 });
 
-// Chart rendering
+// Chart
 function renderChart(data) {
   if (expensesChart) expensesChart.destroy();
 
   const ctx = chartCanvas.getContext("2d");
   const type = chartTypeSelect.value;
+
+  if (data.length === 0) return;
 
   if (type === "bar") {
     const categories = {};
