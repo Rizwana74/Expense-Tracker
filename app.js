@@ -19,6 +19,9 @@ const welcomeMessage = document.getElementById('welcome-message');
 const authError = document.getElementById('auth-error');
 const dataError = document.getElementById('data-error');
 const chartTypeSelect = document.getElementById('chart-type');
+const amountInput = document.getElementById('amount');
+const categoryInput = document.getElementById('category');
+const noteInput = document.getElementById('note');
 
 // Force Google logout function
 async function forceGoogleLogout() {
@@ -35,27 +38,27 @@ async function forceGoogleLogout() {
   });
 }
 
+// Helper: update UI when user logs in
+function handleUserLogin(user) {
+  if (!user) return;
+  loginPage.classList.add('hidden');
+  mainPage.classList.remove('hidden');
+  const username = user.email?.split('@')[0] || "User";
+  welcomeMessage.textContent = `Welcome, ${username}!`;
+  startLiveQuery();
+}
+
 // Handle redirect sign-in (for mobile)
 getRedirectResult(auth)
   .then((result) => {
-    const user = result?.user;
-    if (user) {
-      loginPage.classList.add('hidden');
-      mainPage.classList.remove('hidden');
-      welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
-      startLiveQuery();
-    }
+    handleUserLogin(result?.user);
   })
   .catch((e) => { authError.textContent = "❌ " + e.message; });
 
 // Auth state
 onAuthStateChanged(auth, user => {
-  if (user) {
-    loginPage.classList.add('hidden');
-    mainPage.classList.remove('hidden');
-    welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
-    startLiveQuery();
-  } else {
+  if (user) handleUserLogin(user);
+  else {
     loginPage.classList.remove('hidden');
     mainPage.classList.add('hidden');
     stopLiveQuery();
@@ -105,7 +108,6 @@ document.getElementById('google-login-btn').onclick = async () => {
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // Force logout from Firebase and Google
     if (auth.currentUser) await signOut(auth);
     await forceGoogleLogout();
 
@@ -113,19 +115,8 @@ document.getElementById('google-login-btn').onclick = async () => {
       await signInWithRedirect(auth, provider);
     } else {
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log("Signed in as:", user.email, "UID:", user.uid);
+      handleUserLogin(result.user);
     }
-
-    // Listen for auth state change to load expenses
-    onAuthStateChanged(auth, u => {
-      if (u) {
-        loginPage.classList.add('hidden');
-        mainPage.classList.remove('hidden');
-        welcomeMessage.textContent = `Welcome, ${u.email.split('@')[0]}!`;
-        startLiveQuery(); // expenses load correctly
-      }
-    });
 
   } catch (e) {
     if (e.code === "auth/popup-closed-by-user")
@@ -142,31 +133,31 @@ document.getElementById('google-login-btn').onclick = async () => {
 // LOGOUT BUTTON
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-// ADD EXPENSE - FIXED for Google Users
+// ADD EXPENSE - FIXED
 document.getElementById('add-expense-btn').onclick = async () => {
   dataError.textContent = "";
-  const amount = parseFloat(document.getElementById('amount').value);
-  const category = document.getElementById('category').value;
-  const note = document.getElementById('note').value.trim();
 
-  // Use reliable user object
   const user = auth.currentUser;
   if (!user) return dataError.textContent = "Please log in.";
-  if (!amount) return dataError.textContent = "Enter a valid amount.";
+
+  const amount = parseFloat(amountInput.value);
+  const category = categoryInput.value;
+  const note = noteInput.value.trim();
+
+  if (isNaN(amount) || amount <= 0) return dataError.textContent = "Enter a valid amount.";
+  if (!category) return dataError.textContent = "Select a category.";
 
   try {
     await addDoc(collection(db, 'expenses'), {
-      uid: user.uid,  // critical for Google login
+      uid: user.uid,
       amount,
       category,
       note,
       date: new Date()
     });
 
-    document.getElementById('amount').value = "";
-    document.getElementById('note').value = "";
-
-    // Immediately reload expenses
+    amountInput.value = "";
+    noteInput.value = "";
     startLiveQuery();
 
   } catch (e) {
