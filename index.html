@@ -83,17 +83,6 @@
         </div>
 
         <canvas id="expense-chart" height="250"></canvas>
-
-        <!-- Migration / link helper (hidden unless needed) -->
-        <div id="merge-helper" style="display:none; margin-top:12px; padding:10px; border:1px dashed #ccc;">
-          <p id="merge-msg" style="margin:0 0 8px 0;"></p>
-          <div id="merge-actions" style="display:flex; gap:8px;">
-            <input id="merge-old-uid" placeholder="Old UID (optional)" style="flex:1; padding:6px;" />
-            <button id="merge-copy-btn" class="btn">Copy old data → my account</button>
-            <button id="merge-link-btn" class="btn">I have password: Sign-in & link</button>
-          </div>
-          <p id="merge-status" style="margin-top:8px;color:#b00;"></p>
-        </div>
       </section>
     </div>
   </div>
@@ -101,7 +90,10 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- App scripts -->
+  <!-- Firebase init (your existing file that exports `app`) -->
+  <script type="module" src="main.js"></script>
+
+  <!-- App logic -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
