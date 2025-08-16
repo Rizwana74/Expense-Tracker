@@ -40,7 +40,6 @@ getRedirectResult(auth)
   .then((result) => {
     const user = result?.user;
     if (user) {
-      console.log("Redirect signed in as:", user.email, "UID:", user.uid);
       loginPage.classList.add('hidden');
       mainPage.classList.remove('hidden');
       welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
@@ -143,23 +142,33 @@ document.getElementById('google-login-btn').onclick = async () => {
 // LOGOUT BUTTON
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-// ADD EXPENSE
+// ADD EXPENSE - FIXED for Google Users
 document.getElementById('add-expense-btn').onclick = async () => {
   dataError.textContent = "";
   const amount = parseFloat(document.getElementById('amount').value);
   const category = document.getElementById('category').value;
   const note = document.getElementById('note').value.trim();
-  if (!auth.currentUser) return dataError.textContent = "Please log in.";
+
+  // Use reliable user object
+  const user = auth.currentUser;
+  if (!user) return dataError.textContent = "Please log in.";
   if (!amount) return dataError.textContent = "Enter a valid amount.";
 
   try {
     await addDoc(collection(db, 'expenses'), {
-      uid: auth.currentUser.uid,
-      amount, category, note,
+      uid: user.uid,  // critical for Google login
+      amount,
+      category,
+      note,
       date: new Date()
     });
+
     document.getElementById('amount').value = "";
     document.getElementById('note').value = "";
+
+    // Immediately reload expenses
+    startLiveQuery();
+
   } catch (e) {
     dataError.textContent = e.message;
   }
