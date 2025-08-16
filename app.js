@@ -23,11 +23,12 @@ const chartTypeSelect = document.getElementById('chart-type');
 // Handle redirect sign-in (for mobile)
 getRedirectResult(auth)
   .then((result) => {
-    if (result?.user) {
-      // User signed in via redirect
+    const user = result?.user;
+    if (user) {
+      console.log("Redirect signed in as:", user.email, "UID:", user.uid);
       loginPage.classList.add('hidden');
       mainPage.classList.remove('hidden');
-      welcomeMessage.textContent = `Welcome, ${result.user.email.split('@')[0]}!`;
+      welcomeMessage.textContent = `Welcome, ${user.email.split('@')[0]}!`;
       startLiveQuery();
     }
   })
@@ -79,24 +80,37 @@ document.getElementById('signup-btn').onclick = async () => {
   }
 };
 
-// GOOGLE SIGN-IN (Mobile + Desktop Friendly)
+// GOOGLE SIGN-IN (Mobile + Desktop Friendly) - FIXED
 document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
     provider.addScope('email');
-    provider.setCustomParameters({ prompt: 'select_account' }); // show all accounts
+    provider.setCustomParameters({ prompt: 'select_account' }); // force account selection
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+    // Sign out first to avoid random cached accounts
+    if (auth.currentUser) await signOut(auth);
+
     if (isMobile) {
-      // Use redirect for mobile
       await signInWithRedirect(auth, provider);
     } else {
-      // Desktop popup
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("Popup signed in as:", user.email, "UID:", user.uid);
     }
+
+    // Wait for auth state change
+    onAuthStateChanged(auth, u => {
+      if (u) {
+        loginPage.classList.add('hidden');
+        mainPage.classList.remove('hidden');
+        welcomeMessage.textContent = `Welcome, ${u.email.split('@')[0]}!`;
+        startLiveQuery(); // now expenses will load
+      }
+    });
 
   } catch (e) {
     if (e.code === "auth/popup-closed-by-user")
