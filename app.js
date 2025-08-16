@@ -7,8 +7,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  fetchSignInMethodsForEmail,
-  linkWithCredential,
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import {
   getFirestore,
@@ -65,31 +63,14 @@ signupBtn.addEventListener("click", async () => {
   }
 });
 
-// Google login with account chooser
+// Google login — always ask account chooser
 googleLoginBtn.addEventListener("click", async () => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
   try {
-    const result = await signInWithPopup(auth, provider);
-    const googleUser = result.user;
-    const email = googleUser.email;
-
-    // Check if this email already has another provider (like password)
-    const methods = await fetchSignInMethodsForEmail(auth, email);
-
-    if (methods.includes("password")) {
-      // Ask password & link accounts
-      const password = prompt("Enter your password to link Google with your existing account:");
-      if (password) {
-        const cred = EmailAuthProvider.credential(email, password);
-        try {
-          await linkWithCredential(googleUser, cred);
-        } catch (linkErr) {
-          console.error("Link error:", linkErr);
-        }
-      }
-    }
+    await signInWithPopup(auth, provider);
+    // No linking logic here → Firebase handles UID correctly
   } catch (err) {
     document.getElementById("auth-error").innerText = err.message;
     console.error("Google login error:", err);
