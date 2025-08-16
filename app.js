@@ -20,6 +20,21 @@ const authError = document.getElementById('auth-error');
 const dataError = document.getElementById('data-error');
 const chartTypeSelect = document.getElementById('chart-type');
 
+// Force Google logout function
+async function forceGoogleLogout() {
+  const logoutWindow = window.open(
+    "https://accounts.google.com/Logout",
+    "logout",
+    "width=1,height=1,top=-1000,left=-1000"
+  );
+  return new Promise(resolve => {
+    setTimeout(() => {
+      logoutWindow.close();
+      resolve();
+    }, 1500);
+  });
+}
+
 // Handle redirect sign-in (for mobile)
 getRedirectResult(auth)
   .then((result) => {
@@ -80,35 +95,36 @@ document.getElementById('signup-btn').onclick = async () => {
   }
 };
 
-// GOOGLE SIGN-IN (Mobile + Desktop Friendly) - FIXED
+// GOOGLE SIGN-IN (Desktop + Mobile) - FIXED
 document.getElementById('google-login-btn').onclick = async () => {
   authError.textContent = "";
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
     provider.addScope('email');
-    provider.setCustomParameters({ prompt: 'select_account' }); // force account selection
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    // Sign out first to avoid random cached accounts
+    // Force logout from Firebase and Google
     if (auth.currentUser) await signOut(auth);
+    await forceGoogleLogout();
 
     if (isMobile) {
       await signInWithRedirect(auth, provider);
     } else {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log("Popup signed in as:", user.email, "UID:", user.uid);
+      console.log("Signed in as:", user.email, "UID:", user.uid);
     }
 
-    // Wait for auth state change
+    // Listen for auth state change to load expenses
     onAuthStateChanged(auth, u => {
       if (u) {
         loginPage.classList.add('hidden');
         mainPage.classList.remove('hidden');
         welcomeMessage.textContent = `Welcome, ${u.email.split('@')[0]}!`;
-        startLiveQuery(); // now expenses will load
+        startLiveQuery(); // expenses load correctly
       }
     });
 
@@ -234,4 +250,3 @@ function drawChart(categoryTotals, timeSeries){
     });
   }
 }
-
