@@ -3,65 +3,95 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Expense Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <title>Xpen Tracker</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <!-- Login Page -->
-  <div id="login-page">
-    <h2>Expense Tracker</h2>
-    <h3>Authentication</h3>
-    <input type="email" id="email" placeholder="Email"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button id="signup-btn">Sign Up</button>
-    <button id="login-btn">Login</button>
-    <button id="google-login-btn">Sign In with Google</button>
-    <p id="auth-error" style="color:red;"></p>
+
+  <!-- LOGIN PAGE -->
+  <div id="login-page" class="page bg-login">
+    <div class="card">
+      <h1>Xpen Tracker</h1>
+      <p class="subtitle">Track smarter. Sleep better. 🌙</p>
+
+      <input type="email" id="email" placeholder="Email" autocomplete="username">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+
+      <div class="actions">
+        <button id="login-btn" class="btn primary">Log in</button>
+        <button id="signup-btn" class="btn">Sign up</button>
+      </div>
+      <div class="divider">or</div>
+      <button id="google-login-btn" class="btn google">Continue with Google</button>
+      <p id="auth-error" class="error"></p>
+    </div>
   </div>
 
-  <!-- Main Page -->
-  <div id="main-page" class="hidden">
-    <h2 id="welcome-message">Welcome</h2>
-    <button id="logout-btn">Logout</button>
+  <!-- MAIN PAGE -->
+  <div id="main-page" class="page bg-main hidden">
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="welcome">
+          <h2 id="welcome-message">Welcome!</h2>
+          <p class="muted">Happy tracking ✨</p>
+        </div>
+        <button id="logout-btn" class="btn outline">Logout</button>
+      </header>
 
-    <h3>Add Expense</h3>
-    <input type="number" id="amount" placeholder="Amount"><br>
-    <select id="category">
-      <option value="Food">Food</option>
-      <option value="Transport">Transport</option>
-      <option value="Entertainment">Entertainment</option>
-      <option value="Shopping">Shopping</option>
-      <option value="Other">Other</option>
-    </select><br>
-    <input type="text" id="note" placeholder="Note (optional)"><br>
-    <button id="add-expense-btn">Add Expense</button>
-    <p id="data-error" style="color:red;"></p>
+      <section class="panel">
+        <h3>Add expense</h3>
+        <div class="form-row">
+          <input type="number" id="amount" placeholder="Amount" min="0" step="0.01">
+          <select id="category">
+            <option>Food</option>
+            <option>Travel</option>
+            <option>Shopping</option>
+            <option>Entertainment</option>
+            <option>Others</option>
+          </select>
+          <input type="text" id="note" placeholder="Note (optional)">
+          <button id="add-expense-btn" class="btn primary">Add</button>
+        </div>
+        <p id="data-error" class="error"></p>
+      </section>
 
-    <h3>Your Expenses</h3>
-    <table border="1">
-      <thead>
-        <tr>
-          <th>Amount</th>
-          <th>Category</th>
-          <th>Note</th>
-          <th>Date</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="expense-table"></tbody>
-    </table>
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Your expenses</h3>
+          <div class="chart-controls">
+            <label for="chart-type">Chart:</label>
+            <select id="chart-type">
+              <option value="bar">Bar (by category)</option>
+              <option value="line">Line (over time)</option>
+            </select>
+          </div>
+        </div>
 
-    <h3>Charts</h3>
-    <select id="chart-type">
-      <option value="bar">Bar Chart</option>
-      <option value="line">Line Chart</option>
-    </select>
-    <canvas id="expense-chart" width="400" height="200"></canvas>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="expense-table"></tbody>
+          </table>
+        </div>
+
+        <canvas id="expense-chart" height="250"></canvas>
+      </section>
+    </div>
   </div>
 
-  <!-- Scripts -->
-  <script type="module" src="./main.js"></script>
-  <script type="module" src="./app.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App scripts -->
+  <script type="module" src="main.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
