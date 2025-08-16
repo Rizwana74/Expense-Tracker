@@ -22,103 +22,130 @@ import {
   doc,
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
+/* ================== Firebase refs & DOM ================== */
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const loginPage = document.getElementById("login-page");
-const mainPage = document.getElementById("main-page");
-const loginBtn = document.getElementById("login-btn");
+const mainPage  = document.getElementById("main-page");
+
+const loginBtn  = document.getElementById("login-btn");
 const signupBtn = document.getElementById("signup-btn");
-const googleLoginBtn = document.getElementById("google-login-btn");
+const googleBtn = document.getElementById("google-login-btn");
 const logoutBtn = document.getElementById("logout-btn");
+
+const emailInput = document.getElementById("email");
+const passInput  = document.getElementById("password");
+const authError  = document.getElementById("auth-error");
+
 const welcomeMessage = document.getElementById("welcome-message");
+
 const addExpenseBtn = document.getElementById("add-expense-btn");
-const expenseTable = document.getElementById("expense-table");
-const chartCanvas = document.getElementById("expense-chart");
+const amountInput   = document.getElementById("amount");
+const categoryInput = document.getElementById("category");
+const noteInput     = document.getElementById("note");
+const dataError     = document.getElementById("data-error");
+
+const expenseTable  = document.getElementById("expense-table");
+const chartCanvas   = document.getElementById("expense-chart");
 const chartTypeSelect = document.getElementById("chart-type");
-const dataError = document.getElementById("data-error");
 
-let expensesChart = null;
 let unsubscribeExpenses = null;
+let expensesChart = null;
 
-/* ---------------- AUTH ---------------- */
+/* ================== Helpers ================== */
+function setAuthError(msg) { authError.textContent = msg || ""; }
+function setDataError(msg) { dataError.textContent = msg || ""; }
 
-// Email login
+function safeWelcomeName(user) {
+  const n = user?.displayName || user?.email || "User";
+  return n.includes("@") ? n.split("@")[0] : n;
+}
+
+/* ================== Email/Password Auth ================== */
 loginBtn.addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  setAuthError("");
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    document.getElementById("auth-error").innerText = err.message;
+    await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
+  } catch (e) {
+    setAuthError(e.message);
   }
 });
 
-// Email signup
 signupBtn.addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  setAuthError("");
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    document.getElementById("auth-error").innerText = err.message;
+    await createUserWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
+  } catch (e) {
+    setAuthError(e.message);
   }
 });
 
-// Google login (with linking fix)
-googleLoginBtn.addEventListener("click", async () => {
+/* ================== Google Auth with linking ================== */
+googleBtn.addEventListener("click", async () => {
+  setAuthError("");
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
 
   try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    const email = user.email;
-
-    // check if email already has password sign-in
-    const methods = await fetchSignInMethodsForEmail(auth, email);
-
-    if (methods.includes("password")) {
-      // If user previously signed up with Email/Password, link accounts
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential) {
-        try {
-          await linkWithCredential(auth.currentUser, credential);
-          console.log("Google account linked with email account successfully!");
-        } catch (linkErr) {
-          console.error("Account linking error:", linkErr);
-        }
-      }
-    }
+    await signInWithPopup(auth, provider);
   } catch (err) {
-    document.getElementById("auth-error").innerText = err.message;
-    console.error("Google login error:", err);
+    if (err?.code === "auth/account-exists-with-different-credential") {
+      try {
+        const email = err?.customData?.email;
+        const pendingCred = GoogleAuthProvider.credentialFromError(err);
+
+        if (!email || !pendingCred) {
+          setAuthError("This email exists with another sign-in method. Sign in with email/password once, then try Google again.");
+          return;
+        }
+
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+
+        if (methods.includes("password")) {
+          const pwd = prompt(`This email is already registered.\nEnter the password for ${email} to link Google to your account:`);
+          if (!pwd) { setAuthError("Linking cancelled."); return; }
+
+          await signInWithEmailAndPassword(auth, email, pwd);
+          await linkWithCredential(auth.currentUser, pendingCred);
+
+          setAuthError("");
+          return;
+        }
+
+        setAuthError(`This email is registered with: ${methods.join(", ")}. Please sign in with that method.`);
+      } catch (linkErr) {
+        setAuthError(linkErr.message);
+      }
+    } else {
+      setAuthError(err.message);
+    }
   }
 });
 
-// Logout
+/* ================== Logout ================== */
 logoutBtn.addEventListener("click", () => signOut(auth));
 
-/* ---------------- APP ---------------- */
-
+/* ================== Auth State ================== */
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loginPage.classList.add("hidden");
     mainPage.classList.remove("hidden");
-    welcomeMessage.innerText = `Welcome, ${user.displayName || user.email}!`;
+    welcomeMessage.textContent = `Welcome, ${safeWelcomeName(user)}!`;
 
-    loadExpenses(user.uid);
+    loadExpensesFor(user.uid);
   } else {
     loginPage.classList.remove("hidden");
     mainPage.classList.add("hidden");
-    welcomeMessage.innerText = "Welcome!";
+    welcomeMessage.textContent = "Welcome!";
     if (unsubscribeExpenses) unsubscribeExpenses();
-    if (expensesChart) expensesChart.destroy();
+    if (expensesChart) { expensesChart.destroy(); expensesChart = null; }
+    expenseTable.innerHTML = "";
   }
 });
 
-// Load expenses
-function loadExpenses(uid) {
+/* ================== Expenses ================== */
+function loadExpensesFor(uid) {
   if (unsubscribeExpenses) unsubscribeExpenses();
 
   const q = query(
@@ -127,97 +154,99 @@ function loadExpenses(uid) {
     orderBy("date", "desc")
   );
 
-  unsubscribeExpenses = onSnapshot(q, (snapshot) => {
+  unsubscribeExpenses = onSnapshot(q, (snap) => {
+    const rows = [];
     expenseTable.innerHTML = "";
-    const data = [];
-    snapshot.forEach((docSnap) => {
-      const e = docSnap.data();
-      data.push({ id: docSnap.id, ...e });
-      renderExpense(docSnap.id, e);
+    snap.forEach((d) => {
+      const e = d.data();
+      rows.push({ id: d.id, ...e });
+      appendExpenseRow(d.id, e);
     });
-    renderChart(data);
+    renderChart(rows);
+  }, (err) => {
+    setDataError(err.message);
   });
 }
 
-// Render expense row
-function renderExpense(id, e) {
+function appendExpenseRow(id, e) {
   const tr = document.createElement("tr");
+  const when = new Date(e.date);
   tr.innerHTML = `
-    <td>${e.amount}</td>
+    <td>₹ ${Number(e.amount).toFixed(2)}</td>
     <td>${e.category}</td>
     <td>${e.note || ""}</td>
-    <td>${new Date(e.date).toLocaleDateString()}</td>
+    <td>${isNaN(when) ? "" : when.toLocaleDateString()}</td>
     <td><button class="btn outline" data-id="${id}">Delete</button></td>
   `;
   tr.querySelector("button").addEventListener("click", async () => {
-    await deleteDoc(doc(db, "expenses", id));
+    try { await deleteDoc(doc(db, "expenses", id)); }
+    catch (err) { setDataError(err.message); }
   });
   expenseTable.appendChild(tr);
 }
 
-// Add expense
+/* ================== Add Expense ================== */
 addExpenseBtn.addEventListener("click", async () => {
+  setDataError("");
   const user = auth.currentUser;
-  if (!user) return;
+  if (!user) { setDataError("Please log in."); return; }
 
-  const amount = parseFloat(document.getElementById("amount").value);
-  const category = document.getElementById("category").value;
-  const note = document.getElementById("note").value;
+  const amount = parseFloat(amountInput.value);
+  if (!amount || amount <= 0) { setDataError("Enter a valid amount."); return; }
 
-  if (!amount || amount <= 0) {
-    dataError.innerText = "Enter a valid amount.";
-    return;
+  try {
+    await addDoc(collection(db, "expenses"), {
+      uid: user.uid,
+      amount: Number(amount),
+      category: categoryInput.value,
+      note: (noteInput.value || "").trim(),
+      date: Date.now()
+    });
+    amountInput.value = "";
+    noteInput.value = "";
+  } catch (e) {
+    setDataError(e.message);
   }
-
-  dataError.innerText = "";
-  await addDoc(collection(db, "expenses"), {
-    uid: user.uid,
-    amount,
-    category,
-    note,
-    date: Date.now(),
-  });
-
-  document.getElementById("amount").value = "";
-  document.getElementById("note").value = "";
 });
 
-// Chart
-function renderChart(data) {
-  if (expensesChart) expensesChart.destroy();
+/* ================== Chart ================== */
+chartTypeSelect.addEventListener("change", () => {
+  const user = auth.currentUser;
+  if (user) loadExpensesFor(user.uid);
+});
 
-  const ctx = chartCanvas.getContext("2d");
+function renderChart(items) {
+  if (!chartCanvas) return;
+  if (expensesChart) { expensesChart.destroy(); expensesChart = null; }
+
   const type = chartTypeSelect.value;
 
-  if (data.length === 0) return;
-
   if (type === "bar") {
-    const categories = {};
-    data.forEach((e) => {
-      categories[e.category] = (categories[e.category] || 0) + e.amount;
+    const byCat = {};
+    items.forEach((e) => {
+      byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount || 0);
     });
-    expensesChart = new Chart(ctx, {
+
+    expensesChart = new Chart(chartCanvas.getContext("2d"), {
       type: "bar",
       data: {
-        labels: Object.keys(categories),
-        datasets: [{ label: "Expenses", data: Object.values(categories) }],
+        labels: Object.keys(byCat),
+        datasets: [{ label: "Total by category", data: Object.values(byCat) }]
       },
+      options: { plugins: { legend: { display: false } } }
     });
   } else {
-    const sorted = [...data].sort((a, b) => a.date - b.date);
-    expensesChart = new Chart(ctx, {
+    const byDate = {};
+    items.forEach((e) => {
+      const key = new Date(e.date).toISOString().slice(0, 10);
+      byDate[key] = (byDate[key] || 0) + Number(e.amount || 0);
+    });
+    const labels = Object.keys(byDate).sort();
+    const values = labels.map(k => byDate[k]);
+
+    expensesChart = new Chart(chartCanvas.getContext("2d"), {
       type: "line",
-      data: {
-        labels: sorted.map((e) =>
-          new Date(e.date).toLocaleDateString()
-        ),
-        datasets: [{ label: "Expenses", data: sorted.map((e) => e.amount) }],
-      },
+      data: { labels, datasets: [{ label: "Daily spend", data: values, fill: false }] }
     });
   }
 }
-
-chartTypeSelect.addEventListener("change", () => {
-  const user = auth.currentUser;
-  if (user) loadExpenses(user.uid);
-});
