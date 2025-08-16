@@ -7,6 +7,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import {
   getFirestore,
@@ -63,12 +65,31 @@ signupBtn.addEventListener("click", async () => {
   }
 });
 
-// Google login (always ask account chooser)
+// Google login (with linking fix)
 googleLoginBtn.addEventListener("click", async () => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
+
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    const email = user.email;
+
+    // check if email already has password sign-in
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+
+    if (methods.includes("password")) {
+      // If user previously signed up with Email/Password, link accounts
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential) {
+        try {
+          await linkWithCredential(auth.currentUser, credential);
+          console.log("Google account linked with email account successfully!");
+        } catch (linkErr) {
+          console.error("Account linking error:", linkErr);
+        }
+      }
+    }
   } catch (err) {
     document.getElementById("auth-error").innerText = err.message;
     console.error("Google login error:", err);
