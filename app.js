@@ -1,4 +1,4 @@
-// app.js
+import { app } from "./main.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -6,9 +6,9 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  signOut,
   fetchSignInMethodsForEmail,
-  linkWithCredential
+  linkWithCredential,
+  signOut
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
 import {
@@ -16,240 +16,171 @@ import {
   collection,
   addDoc,
   query,
-  where,
   orderBy,
   onSnapshot,
   deleteDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-import { app } from "./main.js";
-
-// Firebase init
 const auth = getAuth(app);
 const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
 
-// DOM elements
-const loginPage = document.getElementById("login-page");
-const mainPage = document.getElementById("main-page");
-const loginBtn = document.getElementById("login-btn");
-const signupBtn = document.getElementById("signup-btn");
-const googleBtn = document.getElementById("google-login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const authError = document.getElementById("auth-error");
-const dataError = document.getElementById("data-error");
-const welcomeMessage = document.getElementById("welcome-message");
+let expenseChart;
 
-const amountInput = document.getElementById("amount");
-const categoryInput = document.getElementById("category");
-const noteInput = document.getElementById("note");
-const addExpenseBtn = document.getElementById("add-expense-btn");
-const expenseTable = document.getElementById("expense-table");
-const chartTypeSelect = document.getElementById("chart-type");
-const expenseChart = document.getElementById("expense-chart");
-
-let unsubscribeExpenses = null;
-let chartInstance = null;
-
-// ---------------- AUTH ----------------
+// ================== AUTH ==================
 
 // Email login
-loginBtn.addEventListener("click", async () => {
+document.getElementById("login-btn").addEventListener("click", async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
-    authError.innerText = error.message;
+    document.getElementById("auth-error").innerText = error.message;
   }
 });
 
 // Email signup
-signupBtn.addEventListener("click", async () => {
+document.getElementById("signup-btn").addEventListener("click", async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   try {
     await createUserWithEmailAndPassword(auth, email, password);
   } catch (error) {
-    authError.innerText = error.message;
+    document.getElementById("auth-error").innerText = error.message;
   }
 });
 
-// Google login (with account linking fix)
-googleBtn.addEventListener("click", async () => {
+// Google login with linking fix
+const googleProvider = new GoogleAuthProvider();
+document.getElementById("google-login-btn").addEventListener("click", async () => {
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
-    // Check if this Google account already exists with another method
+    // If user already has email/password account → link Google
     const methods = await fetchSignInMethodsForEmail(auth, user.email);
-    if (methods.length > 0 && !methods.includes("google.com")) {
-      // Link Google to the existing account (same email)
+    if (methods.includes("password")) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
-      try {
-        await linkWithCredential(auth.currentUser, credential);
-        console.log("Google account linked to existing email account.");
-      } catch (linkError) {
-        console.warn("Linking failed:", linkError);
-      }
+      await linkWithCredential(auth.currentUser, credential);
+      console.log("Google linked to existing account ✅");
     }
   } catch (error) {
-    console.error("Google login error:", error);
-    authError.innerText = "Google sign-in failed!";
+    document.getElementById("auth-error").innerText = error.message;
   }
 });
 
 // Logout
-logoutBtn.addEventListener("click", async () => {
+document.getElementById("logout-btn").addEventListener("click", async () => {
   await signOut(auth);
 });
 
-// Auth state observer
+// ================== STATE ==================
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    showMainPage(user);
+    document.getElementById("login-page").classList.add("hidden");
+    document.getElementById("main-page").classList.remove("hidden");
+    document.getElementById("welcome-message").innerText =
+      `Welcome, ${user.displayName || user.email}!`;
     loadExpenses(user.uid);
   } else {
-    showLoginPage();
+    document.getElementById("login-page").classList.remove("hidden");
+    document.getElementById("main-page").classList.add("hidden");
   }
 });
 
-// ---------------- UI HANDLERS ----------------
-function showLoginPage() {
-  loginPage.classList.remove("hidden");
-  mainPage.classList.add("hidden");
-  authError.innerText = "";
-  if (unsubscribeExpenses) unsubscribeExpenses();
-}
-
-function showMainPage(user) {
-  loginPage.classList.add("hidden");
-  mainPage.classList.remove("hidden");
-  welcomeMessage.innerText = `Welcome, ${user.displayName || user.email}`;
-}
-
-// ---------------- FIRESTORE (EXPENSES) ----------------
-addExpenseBtn.addEventListener("click", async () => {
-  const amount = parseFloat(amountInput.value);
-  const category = categoryInput.value;
-  const note = noteInput.value;
-
-  if (isNaN(amount) || amount <= 0) {
-    dataError.innerText = "Enter a valid amount.";
-    return;
-  }
-  dataError.innerText = "";
-
-  try {
-    await addDoc(collection(db, "expenses"), {
-      uid: auth.currentUser.uid,
-      amount,
-      category,
-      note,
-      date: new Date().toISOString()
-    });
-    amountInput.value = "";
-    noteInput.value = "";
-  } catch (error) {
-    dataError.innerText = error.message;
-  }
-});
-
-function loadExpenses(uid) {
-  if (unsubscribeExpenses) unsubscribeExpenses();
-
-  const q = query(
-    collection(db, "expenses"),
-    where("uid", "==", uid),
-    orderBy("date", "desc")
-  );
-
-  unsubscribeExpenses = onSnapshot(q, (snapshot) => {
+// ================== EXPENSES ==================
+async function loadExpenses(uid) {
+  const q = query(collection(db, "users", uid, "expenses"), orderBy("date", "desc"));
+  onSnapshot(q, (snapshot) => {
+    const table = document.getElementById("expense-table");
+    table.innerHTML = "";
     const expenses = [];
-    expenseTable.innerHTML = "";
-
     snapshot.forEach((docSnap) => {
       const exp = { id: docSnap.id, ...docSnap.data() };
       expenses.push(exp);
-
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${exp.amount}</td>
         <td>${exp.category}</td>
         <td>${exp.note || ""}</td>
         <td>${new Date(exp.date).toLocaleString()}</td>
-        <td><button data-id="${exp.id}" class="delete-btn">Delete</button></td>
+        <td><button data-id="${exp.id}" class="delete-btn">❌</button></td>
       `;
-      expenseTable.appendChild(tr);
+      table.appendChild(tr);
     });
+    updateChart(expenses);
 
-    // Hook up delete buttons
+    // Delete listeners
     document.querySelectorAll(".delete-btn").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        const id = e.target.getAttribute("data-id");
-        await deleteDoc(doc(db, "expenses", id));
+      btn.addEventListener("click", async () => {
+        await deleteDoc(doc(db, "users", uid, "expenses", btn.dataset.id));
       });
     });
-
-    renderChart(expenses);
   });
 }
 
-// ---------------- CHARTS ----------------
-chartTypeSelect.addEventListener("change", () => {
-  if (auth.currentUser) loadExpenses(auth.currentUser.uid);
+// Add expense
+document.getElementById("add-expense-btn").addEventListener("click", async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const category = document.getElementById("category").value;
+  const note = document.getElementById("note").value;
+  if (isNaN(amount) || amount <= 0) {
+    document.getElementById("data-error").innerText = "Enter a valid amount.";
+    return;
+  }
+  document.getElementById("data-error").innerText = "";
+  await addDoc(collection(db, "users", user.uid, "expenses"), {
+    amount,
+    category,
+    note,
+    date: Date.now(),
+  });
+  document.getElementById("amount").value = "";
+  document.getElementById("note").value = "";
 });
 
-function renderChart(expenses) {
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+// ================== CHART ==================
+function updateChart(expenses) {
+  const ctx = document.getElementById("expense-chart").getContext("2d");
+  const chartType = document.getElementById("chart-type").value;
 
-  const ctx = expenseChart.getContext("2d");
-  const type = chartTypeSelect.value;
+  if (expenseChart) expenseChart.destroy();
 
-  if (type === "bar") {
-    // Group by category
+  if (chartType === "bar") {
     const totals = {};
     expenses.forEach((e) => {
       totals[e.category] = (totals[e.category] || 0) + e.amount;
     });
-
-    chartInstance = new Chart(ctx, {
+    expenseChart = new Chart(ctx, {
       type: "bar",
       data: {
         labels: Object.keys(totals),
-        datasets: [
-          {
-            label: "Expenses by Category",
-            data: Object.values(totals),
-            backgroundColor: "rgba(75,192,192,0.6)"
-          }
-        ]
+        datasets: [{
+          label: "Expenses",
+          data: Object.values(totals),
+        }]
       }
     });
   } else {
-    // Line chart over time
-    const sorted = [...expenses].sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
-    );
-
-    chartInstance = new Chart(ctx, {
+    const sorted = expenses.sort((a, b) => a.date - b.date);
+    expenseChart = new Chart(ctx, {
       type: "line",
       data: {
-        labels: sorted.map((e) =>
-          new Date(e.date).toLocaleDateString()
-        ),
-        datasets: [
-          {
-            label: "Expenses Over Time",
-            data: sorted.map((e) => e.amount),
-            borderColor: "rgba(153,102,255,1)",
-            fill: false
-          }
-        ]
+        labels: sorted.map(e => new Date(e.date).toLocaleDateString()),
+        datasets: [{
+          label: "Expenses",
+          data: sorted.map(e => e.amount),
+        }]
       }
     });
   }
 }
+
+// Chart type change
+document.getElementById("chart-type").addEventListener("change", () => {
+  const user = auth.currentUser;
+  if (user) loadExpenses(user.uid);
+});
